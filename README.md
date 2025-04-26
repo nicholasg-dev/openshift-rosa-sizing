@@ -1,6 +1,13 @@
-# OpenShift ROSA Sizing Tool
+# OpenShift ROSA Sizing Tool (v2.0)
 
-A comprehensive toolset for collecting metrics and calculating sizing recommendations for Red Hat OpenShift Service on AWS (ROSA) clusters.
+A production-ready toolset for collecting real cluster metrics and generating accurate sizing recommendations for Red Hat OpenShift Service on AWS (ROSA) clusters.
+
+## Key Improvements in v2.0
+- **Real Data Only**: Removed all sample data dependencies
+- **Enhanced Documentation**: Complete code comments and usage examples
+- **ROSA-Specific Logic**: Added managed control plane considerations
+- **Cost Estimation**: Integrated rough cost projections
+- **Workload Profiling**: Automatic CPU/Memory-bound detection
 
 ## Features
 
@@ -18,7 +25,34 @@ A comprehensive toolset for collecting metrics and calculating sizing recommenda
 - Provides storage sizing recommendations
 - Generates both JSON and human-readable reports
 
-## Prerequisites
+## Getting Started (Real Data Workflow)
+
+1. **Set Up Authentication**:
+   ```bash
+   oc create serviceaccount sizing-user -n openshift-monitoring
+   oc adm policy add-cluster-role-to-user cluster-monitoring-view -z sizing-user -n openshift-monitoring
+   export PROMETHEUS_TOKEN=$(oc serviceaccounts get-token sizing-user -n openshift-monitoring)
+   ```
+
+2. **Collect Metrics** (7-30 days recommended):
+   ```bash
+   python collect_metrics.py \
+     --prometheus-url https://prometheus-k8s-openshift-monitoring.apps.your-cluster.example.com \
+     --token $PROMETHEUS_TOKEN \
+     --days 14 \
+     --step 1h \
+     --output production_metrics.json
+   ```
+
+3. **Generate Recommendations**:
+   ```bash
+   python calculate_sizing.py \
+     --input production_metrics.json \
+     --output sizing_recommendations.json \
+     --redundancy 1.3
+   ```
+
+## Prerequisites (Detailed)
 
 ### 1. Python Environment
 - Python 3.8+ recommended

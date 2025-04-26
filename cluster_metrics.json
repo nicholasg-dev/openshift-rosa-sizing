@@ -1,26 +1,26 @@
 {
   "cpu_usage": {
-    "average": 7.083728990484649,
-    "peak": 13.180189530998799,
-    "min": 5.767911219425604,
-    "samples": 49
+    "average": 7.052800384708102,
+    "peak": 12.258765832749905,
+    "min": 5.627728706443296,
+    "samples": 48
   },
   "memory_usage": {
-    "average": 86.04970005580357,
-    "peak": 91.40865707397461,
-    "min": 64.27175521850586,
+    "average": 86.02655986863739,
+    "peak": 91.94367218017578,
+    "min": 69.00947189331055,
     "samples": 49
   },
   "pod_count": {
-    "average": 498.9387755102041,
-    "peak": 505.0,
+    "average": 499.1224489795918,
+    "peak": 508.0,
     "min": 497.0,
     "samples": 49
   },
   "pvc_storage": {
-    "average": 0.8263057786591199,
-    "peak": 1.4997406005859375,
-    "min": 0.5295181274414062,
+    "average": 0.8283329399264588,
+    "peak": 1.5007057189941406,
+    "min": 0.5470466613769531,
     "samples": 49
   },
   "node_count": {
@@ -30,16 +30,16 @@
     "samples": 49
   },
   "cpu_requests": {
-    "average": 32.78361224489815,
-    "peak": 33.273000000000174,
+    "average": 32.798714285714475,
+    "peak": 34.32300000000015,
     "min": 32.673000000000194,
     "samples": 49
   },
   "memory_requests": {
-    "average": 110.19306938988822,
-    "peak": 110.7533597946167,
+    "average": 110.21967280904452,
+    "peak": 112.24347591400146,
     "min": 109.94456624984741,
-    "samples": 49
+    "samples": 48
   },
   "namespace_count": {
     "average": 0,
@@ -48,7 +48,7 @@
     "samples": 0
   },
   "metadata": {
-    "collection_time": "2025-04-26 14:34:28",
+    "collection_time": "2025-04-26 14:51:39",
     "days_collected": 7,
     "step_interval": "1h",
     "prometheus_url": "https://prometheus-k8s-openshift-monitoring.apps.cluster-kh767.dynamic.redhatworkshops.io"

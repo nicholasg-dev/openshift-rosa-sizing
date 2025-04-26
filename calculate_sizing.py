@@ -18,12 +18,14 @@
 import json
 import argparse
 import sys
+import os
 from datetime import datetime
 
 def load_instance_types(file_path):
     """Load instance types from JSON file."""
     try:
-        with open(file_path, 'r') as f:
+        full_path = os.path.join(os.path.dirname(__file__), file_path)
+        with open(full_path, 'r') as f:
             data = json.load(f)
         instance_types = {}
         for instance in data['InstanceTypes']:
@@ -31,7 +33,9 @@ def load_instance_types(file_path):
             instance_types[instance_type] = {
                 'vcpu': instance['VCpuInfo']['DefaultVCpus'],
                 'memory_gb': instance['MemoryInfo']['SizeInMiB'] / 1024,
-                'bare_metal': instance.get('BareMetal', False)
+                'bare_metal': instance.get('BareMetal', False),
+                'hourly_cost': instance.get('Pricing', {}).get('us-east-1', 0),
+                'family': instance['InstanceType'].split('.')[0]
             }
         return instance_types
     except Exception as e:
@@ -84,35 +88,45 @@ def load_metrics(input_file):
         print(f"Error loading metrics file: {e}")
         sys.exit(1)
 
-def calculate_worker_nodes(metrics, redundancy):
-    """Calculate recommended worker node configuration with detailed analysis."""
+def bin_packing_simulation(metrics, instance_type, redundancy):
+    """Simulate bin packing to estimate required nodes."""
     cpu_peak = metrics['cpu_usage']['peak'] * redundancy
     memory_peak = metrics['memory_usage']['peak'] * redundancy
     
+    vcpu_per_node = INSTANCE_TYPES[instance_type]['vcpu']
+    memory_per_node = INSTANCE_TYPES[instance_type]['memory_gb']
+    
+    nodes_cpu = max(2, round(cpu_peak / vcpu_per_node))  # Minimum 2 nodes for ROSA
+    nodes_memory = max(2, round(memory_peak / memory_per_node))
+    recommended_nodes = max(nodes_cpu, nodes_memory)
+    
+    return recommended_nodes
+
+def calculate_worker_nodes(metrics, redundancy):
+    """Calculate recommended worker node configuration using bin packing simulation."""
     recommendations = []
     for instance_type, specs in INSTANCE_TYPES.items():
-        # Calculate nodes needed based on CPU and memory
-        nodes_cpu = max(2, round(cpu_peak / specs['vcpu']))  # ROSA minimum 2 nodes
-        login_nodes = max(2, round(memory_peak / specs['memory_gb']))
-        recommended_nodes = max(nodes_cpu, login_nodes)
+        recommended_nodes = bin_packing_simulation(metrics, instance_type, redundancy)
+        cpu_util = (metrics['cpu_usage']['peak'] * redundancy) / (recommended_nodes * specs['vcpu'])
+        memory_util = (metrics['memory_usage']['peak'] * redundancy) / (recommended_nodes * specs['memory_gb'])
         
-        cpu_util = (cpu_peak / recommended_nodes) / specs['vcpu']
-        memory_util = (memory_peak / recommended_nodes) / specs['memory_gb']
-        
-        # Check if this configuration meets ROSA requirements
-        if recommended_nodes >= 2:
-            recommendations.append({
-                'instance_type': instance_type,
-                'node_count': recommended_nodes,
-                'specs': specs,
-                'utilization': {
-                    'cpu': cpu_util,
-                    'memory': memory_util
-                },
-                'rationale': f"CPU peak: {cpu_peak:.2f} cores, Memory peak: {memory_peak:.2f} GB"
-            })
+        recommendations.append({
+            'instance_type': instance_type,
+            'node_count': recommended_nodes,
+            'specs': specs,
+            'utilization': {
+                'cpu': cpu_util,
+                'memory': memory_util
+            },
+            'rationale': f"Bin packing simulation: CPU peak = {metrics['cpu_usage']['peak']:.2f} cores, Memory peak = {metrics['memory_usage']['peak']:.2f} GB",
+            'estimated_cost': {
+                'hourly': specs['hourly_cost'] * recommended_nodes,
+                'monthly': specs['hourly_cost'] * recommended_nodes * 730,
+                'instance_family': specs['family']
+            }
+        })
     
-    # Sort by CPU utilization efficiency
+    # Sort recommendations by CPU utilization efficiency
     recommendations.sort(key=lambda x: abs(x['utilization']['cpu'] - 1))
     return recommendations[:3]
 
@@ -124,7 +138,11 @@ def generate_recommendations(metrics, redundancy):
     return {
         'metadata': {
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'metrics_collection_time': metrics['metadata']['collection_time'],
+            'metrics_collection_window': {
+                'start': metrics['metadata'].get('window_start', metrics['metadata'].get('collection_time')),
+                'end': metrics['metadata'].get('collection_time'),
+                'duration_hours': metrics['metadata'].get('duration_hours', 24)
+            },
             'redundancy_factor': redundancy
         },
         'summary': {
@@ -146,37 +164,89 @@ def generate_recommendations(metrics, redundancy):
     }
 
 def calculate_storage(metrics, redundancy):
-    """Calculate storage recommendations."""
+    """Calculate storage recommendations with IOPS analysis."""
     storage_peak = metrics['pvc_storage']['peak'] * redundancy
+    iops_peak = metrics.get('pvc_iops', {}).get('peak', 3000) * redundancy
+    throughput_peak = metrics.get('pvc_throughput', {}).get('peak', 125) * redundancy
     
-    return {
+    # Determine storage profile based on IOPS needs
+    storage_profile = 'balanced'
+    if iops_peak > 16000:
+        storage_profile = 'high-iops'
+    elif iops_peak < 3000:
+        storage_profile = 'standard'
+    
+    recommendations = {
         'total_storage_gb': round(storage_peak),
+        'performance_requirements': {
+            'iops_peak': round(iops_peak),
+            'throughput_peak_mbps': round(throughput_peak),
+            'storage_profile': storage_profile
+        },
         'recommendations': {
             'gp3': {
                 'type': 'gp3',
                 'description': 'General Purpose SSD',
                 'recommended_for': 'Most workloads',
-                'min_size_gb': round(storage_peak)
+                'min_size_gb': round(storage_peak),
+                'min_iops': max(3000, round(iops_peak * 0.8)),
+                'min_throughput': max(125, round(throughput_peak * 0.8))
             },
             'io2': {
                 'type': 'io2',
                 'description': 'Provisioned IOPS SSD',
                 'recommended_for': 'I/O-intensive workloads',
-                'min_size_gb': round(storage_peak)
+                'min_size_gb': round(storage_peak),
+                'min_iops': max(100, round(iops_peak * 0.8)),
+                'min_throughput': max(125, round(throughput_peak * 0.8))
             }
         }
     }
+    
+    return recommendations
+
+def detect_workload_type(metrics):
+    """Determine if workload is CPU-bound, memory-bound, or balanced."""
+    cpu_peak = metrics['cpu_usage']['peak']
+    memory_peak = metrics['memory_usage']['peak']
+    
+    # Calculate ratio of CPU to memory usage
+    ratio = cpu_peak / (memory_peak + 0.0001)  # Avoid division by zero
+    
+    if ratio > 1.5:
+        return 'CPU-bound'
+    elif ratio < 0.67:
+        return 'Memory-bound'
+    else:
+        return 'Balanced'
 
 def generate_recommendations(metrics, redundancy):
     """Generate comprehensive sizing recommendations."""
+    workload_type = detect_workload_type(metrics)
     worker_recommendations = calculate_worker_nodes(metrics, redundancy)
     storage_recommendations = calculate_storage(metrics, redundancy)
+    
+    # Add ROSA-specific context
+    rosa_context = {
+        'rosa_specifics': {
+            'control_plane': 'Managed by ROSA (3 m5.xlarge nodes)',
+            'infra_nodes': 'Managed by ROSA (3 m5.xlarge nodes)',
+            'minimum_workers': 2,
+            'sla_requirements': '3+ nodes across multiple AZs recommended for production'
+        }
+    }
     
     return {
         'metadata': {
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'metrics_collection_time': metrics['metadata']['collection_time'],
-            'redundancy_factor': redundancy
+            'metrics_collection_window': {
+                'start': metrics['metadata'].get('window_start'),
+                'end': metrics['metadata'].get('collection_time'),
+                'duration_hours': metrics['metadata'].get('duration_hours', 24)
+            },
+            'redundancy_factor': redundancy,
+            'rosa_context': rosa_context,
+            'analysis_note': 'Recommendations based on peak usage during collection window'
         },
         'summary': {
             'current_metrics': {
@@ -206,7 +276,8 @@ def format_text_output(recommendations):
     text.append("=" * 80)
     
     text.append("\nGenerated at: " + recommendations['metadata']['generated_at'])
-    text.append("Based on metrics from: " + recommendations['metadata']['metrics_collection_time'])
+    window = recommendations['metadata']['metrics_collection_window']
+    text.append(f"Metrics collection window: {window['start']} to {window['end']} ({window['duration_hours']} hours)")
     text.append(f"Redundancy factor: {recommendations['metadata']['redundancy_factor']}")
     
     text.append("\nCurrent Usage Peaks:")
@@ -220,10 +291,21 @@ def format_text_output(recommendations):
         text.append(f"\n{i}. {rec['instance_type']} Configuration:")
         text.append(f"   - Number of nodes: {rec['node_count']}")
         text.append(f"   - vCPUs per node: {rec['specs']['vcpu']}")
-        text.append(f"   - Memory per node: {rec['specs']['memory_gb']} GB")
-        text.append(f"   - Use case: {rec['specs']['use_case']}")
+        text.append(f"   - Memory per node: {rec['specs']['memory_gb']:.1f} GB")
+        text.append(f"   - Bare metal: {'Yes' if rec['specs'].get('bare_metal', False) else 'No'}")
         text.append(f"   - CPU utilization: {rec['utilization']['cpu']*100:.1f}%")
         text.append(f"   - Memory utilization: {rec['utilization']['memory']*100:.1f}%")
+        text.append(f"   - Rationale: {rec.get('rationale', 'N/A')}")
+        text.append(f"   - Estimated Cost:")
+        text.append(f"     - Hourly: ${rec['estimated_cost']['hourly']:.2f}")
+        text.append(f"     - Monthly: ${rec['estimated_cost']['monthly']:.2f}")
+        text.append(f"     - Instance Family: {rec['estimated_cost']['instance_family']}")
+    
+    text.append("\nStorage Performance Requirements:")
+    perf = recommendations['storage']['performance_requirements']
+    text.append(f"- Peak IOPS: {perf['iops_peak']}")
+    text.append(f"- Peak Throughput: {perf['throughput_peak_mbps']} MB/s")
+    text.append(f"- Profile: {perf['storage_profile']}")
     
     text.append("\nStorage Recommendations:")
     text.append(f"Total storage required: {recommendations['storage']['total_storage_gb']} GB")
@@ -233,6 +315,8 @@ def format_text_output(recommendations):
         text.append(f"- Description: {details['description']}")
         text.append(f"- Recommended for: {details['recommended_for']}")
         text.append(f"- Minimum size: {details['min_size_gb']} GB")
+        text.append(f"- Minimum IOPS: {details['min_iops']}")
+        text.append(f"- Minimum Throughput: {details['min_throughput']} MB/s")
     
     text.append("\nNotes:")
     for note in recommendations['worker_nodes']['notes']:

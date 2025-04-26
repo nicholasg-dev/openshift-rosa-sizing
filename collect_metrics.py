@@ -92,19 +92,169 @@ def check_openshift_login():
         print("You can still proceed with the Prometheus URL and token.")
         return False
 
-def parse_arguments():
-    """
-    Parse command line arguments for the metric collection script.
+def validate_positive_integer(value, field_name):
+    """Validate that a value is a positive integer."""
+    try:
+        val = int(value)
+        if val <= 0:
+            raise ValueError(f"{field_name} must be a positive integer.")
+        return val
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid {field_name}. Please enter a positive integer.")
 
-    Returns:
-        argparse.Namespace: The parsed command line arguments
+    # Parse command line arguments
+    args = parse_arguments()
+
+    # Collect metrics from Prometheus
+    metrics = collect_metrics(args)
+
+    # Print a summary of the collected metrics
+    print("\nMetrics Summary:")
+    for metric, values in metrics.items():
+        if metric != "metadata":
+            print(f"{metric}:")
+            print(f"  Average: {values['average']:.2f}")
+            print(f"  Peak: {values['peak']:.2f}")
+            print(f"  Min: {values['min']:.2f}")
+            print(f"  Samples: {values['samples']}")
+
+    print("\nThese metrics will be used for ROSA cluster sizing calculations.")
+    print("Run the calculate_sizing.py script next to generate sizing recommendations.")
+    
+    # Perform cleanup if requested
+    if args.cleanup or args.remove_backups or args.remove_outputs or args.logout or args.archive:
+        # If any cleanup option is specified but --cleanup is not, enable it
+        if not args.cleanup:
+            args.cleanup = True
+        cleanup_environment(args)
+
+if __name__ == "__main__":
+    main()
+
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+
+
+<environment_details>
+# VSCode Visible Files
+openshift-rosa-sizing/collect_metrics.py
+
+# VSCode Open Tabs
+openshift-rosa-sizing/requirements.txt
+openshift-rosa-sizing/README.md
+openshift-rosa-sizing/collect_metrics.py
+
+# Current Time
+4/26/2025, 3:15:05 PM (America/Los_Angeles, UTC-7:00)
+
+# Context Window Usage
+127,895 / 256K tokens used (50%)
+
+# Current Mode
+ACT MODE
+#!/usr/bin/env python3
+# ============================================================================
+# OpenShift Sizing - Metric Collection Script
+# ============================================================================
+#
+# This script collects key metrics from an OpenShift cluster's Prometheus instance
+# to help with sizing calculations for ROSA (Red Hat OpenShift Service on AWS).
+#
+# The script queries Prometheus for metrics such as CPU usage, memory usage,
+# pod count, and storage usage over a specified time period. It then calculates
+# average and peak values for each metric and saves the results to a JSON file.
+#
+# Usage:
+#   ./collect_metrics.py --prometheus-url <URL> --token <TOKEN> [options]
+#
+# Options:
+#   --output FILENAME    Output file path (default: cluster_metrics.json)
+#   --days DAYS          Number of days of historical data to analyze (default: 7)
+#   --step INTERVAL      Query step interval (e.g., 1h, 30m, 5m) (default: 1h)
+#   --verify-ssl         Verify SSL certificates (default: False for self-signed certs)
+#
+# Cleanup Options:
+#   --cleanup, --clean, --clean-up       Clean up temporary files and reset environment
+#   --remove-backups, --remove-back-ups  Remove backup files during cleanup
+#   --remove-outputs, --remove-files     Remove output files during cleanup
+#   --logout, --log-out                  Logout from OpenShift during cleanup
+#   --archive, --zip                     Create a timestamped archive of output files
+#
+# Requirements:
+#   - Python 3.6+
+#   - requests library
+#   - Access to an OpenShift cluster with Prometheus
+#   - A service account token with cluster-monitoring-view role
+#
+# Author: OpenShift Sizing Team
+# ============================================================================
+
+import requests
+import json
+import time
+import sys
+import os
+import glob
+import shutil
+import argparse
+import subprocess
+from datetime import datetime, timedelta
+import urllib3
+
+# Disable SSL warnings for self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def check_dependencies():
     """
+    Check if required dependencies are installed.
+    
+    Returns:
+        bool: True if all dependencies are installed, False otherwise
+    """
+    # The requests module is already imported at the top level,
+    # so if we got this far, it's available.
+    # This function is here for future expansion to check other dependencies.
+    return True
+
+def check_openshift_login():
+    """
+    Check if the user is logged into an OpenShift cluster.
+    
+    This function runs the 'oc whoami' command to check if the user is logged in.
+    It prints a warning if the user is not logged in, but does not exit the script.
+    
+    Returns:
+        bool: True if logged in, False otherwise
+    """
+    try:
+        result = subprocess.run(['oc', 'whoami'], 
+                               stdout=subprocess.PIPE, 
+                               stderr=subprocess.PIPE, 
+                               text=True, 
+                               check=False)
+        
+        if result.returncode == 0:
+            print(f"Logged into OpenShift as: {result.stdout.strip()}")
+            return True
+        else:
+            print("Warning: Not logged into OpenShift. Some features may not work correctly.")
+            print("You can still proceed with the Prometheus URL and token.")
+            print("To log in, run: oc login <cluster-url>")
+            return False
+    except Exception as e:
+        print(f"Warning: Error checking OpenShift login status: {e}")
+        print("You can still proceed with the Prometheus URL and token.")
+        return False
+
+def parse_arguments():
+    """Parse command line arguments with validation."""
     parser = argparse.ArgumentParser(
-        description='Collect metrics from Prometheus for OpenShift sizing.',
+        description='Collect metrics from Prometheus for ROSA sizing.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    # Required arguments
+    # Required arguments with basic validation
     parser.add_argument(
         '--prometheus-url',
         required=True,
@@ -113,30 +263,30 @@ def parse_arguments():
     parser.add_argument(
         '--token',
         required=True,
-        help='Bearer token for authentication to Prometheus'
+        help='Bearer token for Prometheus authentication'
     )
 
-    # Optional arguments
+    # Optional arguments with validation
     parser.add_argument(
         '--output',
         default='cluster_metrics.json',
-        help='Output file path for the collected metrics'
+        help='Output file path for collected metrics'
     )
     parser.add_argument(
         '--days',
-        type=int,
+        type=validate_positive_integer,
         default=7,
-        help='Number of days of historical data to analyze'
+        help='Number of days of historical data'
     )
     parser.add_argument(
         '--step',
         default='1h',
-        help='Query step interval (e.g., 1h, 30m, 5m)'
+        help='Query step interval (e.g., 1h, 30m)'
     )
     parser.add_argument(
         '--verify-ssl',
         action='store_true',
-        help='Verify SSL certificates (default: False for self-signed certs)'
+        help='Verify SSL certificates (default: False)'
     )
 
     # Cleanup options
