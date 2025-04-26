@@ -93,21 +93,52 @@ python calculate_sizing.py --input metrics.json [options]
 ## ROSA Specific Considerations
 
 ### Cluster Components
-- ROSA includes managed control plane and infra nodes
-- Sizing recommendations focus on worker nodes
+- ROSA includes managed control plane and infra nodes (typically on m5.xlarge instances)
+- Sizing recommendations focus on worker nodes which handle application workloads
 
 ### Minimum Requirements
-- Minimum 2-3 worker nodes recommended
-- Multiple availability zones recommended for HA
+- Minimum 2 worker nodes recommended for basic functionality
+- 3+ worker nodes recommended for high availability
+- Multiple availability zones recommended for production environments
 
 ### Instance Types
-- Recommendations based on ROSA-supported AWS instance types
-- Common families: m (general), c (compute), r (memory)
+- Recommendations based on all available x86_64 AWS instance types (including bare metal)
+- Instance type families:
+  - General Purpose (m5, m6i, etc.) - balanced CPU and memory
+  - Compute Optimized (c5, c6i, etc.) - high CPU performance
+  - Memory Optimized (r5, r6i, etc.) - high memory capacity
+  - Storage Optimized (i3, i4i, etc.) - high storage performance
+  - Bare Metal (metal instances) - dedicated hardware for high-performance requirements
+
+### Sizing Algorithm
+- Analyzes CPU and memory usage patterns from collected metrics
+- Simulates different instance types and counts to find optimal configuration
+- Considers both average and peak usage with redundancy factor
+- Provides rationale for recommended configurations
+
+## Cost Estimation
+
+While the tool doesn't directly pull AWS pricing data, you can use the instance type recommendations with AWS Pricing Calculator to estimate costs.
+
+## Output & Reporting
+
+### JSON Output
+- Detailed sizing recommendations
+- Intermediate calculations
+- Rationale for recommendations
+
+### Text Report
+- Human-readable summary
+- Configuration details
+- Sizing rationale
 
 ## Contributing
 
-Contributions welcome! Submit Pull Requests.
+Contributions welcome! Please submit Pull Requests with:
+- Clear description of changes
+- Any relevant test cases
+- Documentation updates
 
 ## License
 
-MIT License - see LICENSE file.
+MIT License - see LICENSE file for details.
