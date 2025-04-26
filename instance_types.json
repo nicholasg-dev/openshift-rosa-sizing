@@ -1,0 +1,52 @@
+{
+  "InstanceTypes": [
+    {
+      "InstanceType": "x1e.8xlarge",
+      "ProcessorInfo": {
+        "SupportedArchitectures": ["x86_64"],
+        "SustainedClockSpeedInGhz": 2.3
+      },
+      "VCpuInfo": {
+        "DefaultVCpus": 32,
+        "DefaultCores": 16,
+        "DefaultThreadsPerCore": 2
+      },
+      "MemoryInfo": {
+        "SizeInMiB": 999424
+      },
+      "BareMetal": false
+    },
+    {
+      "InstanceType": "r6idn.16xlarge",
+      "ProcessorInfo": {
+        "SupportedArchitectures": ["x86_64"],
+        "SustainedClockSpeedInGhz": 3.5
+      },
+      "VCpuInfo": {
+        "DefaultVCpus": 64,
+        "DefaultCores": 32,
+        "DefaultThreadsPerCore": 2
+      },
+      "MemoryInfo": {
+        "SizeInMiB": 524288
+      },
+      "BareMetal": false
+    },
+    {
+      "InstanceType": "r7iz.metal-24xl",
+      "ProcessorInfo": {
+        "SupportedArchitectures": ["x86_64"],
+        "SustainedClockSpeedInGhz": 3.2
+      },
+      "VCpuInfo": {
+        "DefaultVCpus": 96,
+        "DefaultCores": 48,
+        "DefaultThreadsPerCore": 2
+      },
+      "MemoryInfo": {
+        "SizeInMiB": 393216
+      },
+      "BareMetal": true
+    }
+  ]
+}

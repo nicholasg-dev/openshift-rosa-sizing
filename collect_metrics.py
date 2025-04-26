@@ -474,24 +474,7 @@ def create_archive(args, config):
         return None
 
 def cleanup_environment(args):
-    """
-    Clean up temporary files and reset the environment after collecting metrics.
-
-    This function performs various cleanup tasks based on the command line arguments:
-    - Creates an archive of output files if --archive is specified
-    - Backs up the metrics file if not removing outputs
-    - Removes temporary files specified in the cleanup configuration
-    - Removes backup files if --remove-backups is specified
-    - Removes output files if --remove-outputs is specified
-    - Logs out from OpenShift if --logout is specified
-    - Provides commands to clear environment variables
-    
-    The behavior can be customized through the cleanup_config.json file and
-    command line arguments.
-
-    Args:
-        args (argparse.Namespace): Command line arguments with cleanup options
-    """
+    """Clean up after metric collection based on command line arguments."""
     print("\nPerforming cleanup...")
     
     # Load cleanup configuration
@@ -499,16 +482,9 @@ def cleanup_environment(args):
     
     # Create archive if requested
     if args.archive:
-        create_archive(args, config)
-    
-    # Backup the metrics file (if not removing outputs)
-    if not args.remove_outputs and os.path.exists(args.output):
-        backup_file = f"{args.output}.bak"
-        try:
-            shutil.copy2(args.output, backup_file)
-            print(f"Created backup of metrics file: {backup_file}")
-        except Exception as e:
-            print(f"Error creating backup of metrics file: {e}")
+        archive_path = create_archive(args, config)
+        if archive_path:
+            print(f"Created archive: {archive_path}")
     
     # Remove temporary files
     for pattern in config.get("temp_files", []):
@@ -541,26 +517,10 @@ def cleanup_environment(args):
     # Logout from OpenShift if requested
     if args.logout:
         try:
-            result = subprocess.run(['oc', 'logout'], 
-                                   stdout=subprocess.PIPE, 
-                                   stderr=subprocess.PIPE, 
-                                   text=True, 
-                                   check=False)
-            if result.returncode == 0:
-                print(f"\nLogged out from OpenShift: {result.stdout.strip()}")
-            else:
-                print(f"\nError logging out from OpenShift: {result.stderr.strip()}")
+            subprocess.run(['oc', 'logout'], check=True)
+            print("Logged out from OpenShift")
         except Exception as e:
-            print(f"\nError executing logout command: {e}")
-    else:
-        # Just show the command
-        print("\nTo logout from OpenShift (if desired), run:")
-        print("  oc logout")
-    
-    # Clear environment variables (just show the commands)
-    print("\nTo clear environment variables, run:")
-    print("  unset PROMETHEUS_URL")
-    print("  unset TOKEN")
+            print(f"Error logging out: {e}")
     
     print("\nCleanup completed.")
 

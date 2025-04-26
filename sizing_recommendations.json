@@ -1,0 +1,87 @@
+{
+  "metadata": {
+    "generated_at": "2025-04-26 14:31:29",
+    "metrics_collection_time": "2025-04-26 14:30:00",
+    "redundancy_factor": 1.3
+  },
+  "summary": {
+    "current_metrics": {
+      "cpu_cores_peak": 45.2,
+      "memory_gb_peak": 128.6,
+      "pod_count_peak": 180,
+      "storage_gb_peak": 750.2
+    }
+  },
+  "worker_nodes": {
+    "recommendations": [
+      {
+        "instance_type": "m5.2xlarge",
+        "node_count": 7,
+        "specs": {
+          "vcpu": 8,
+          "memory_gb": 32,
+          "description": "General Purpose",
+          "use_case": "Production workloads"
+        },
+        "utilization": {
+          "cpu": 1.0492857142857144,
+          "memory": 1.044875
+        },
+        "balance_score": 0.004410714285714379
+      },
+      {
+        "instance_type": "c5.2xlarge",
+        "node_count": 10,
+        "specs": {
+          "vcpu": 8,
+          "memory_gb": 16,
+          "description": "Compute Optimized",
+          "use_case": "CPU-intensive workloads"
+        },
+        "utilization": {
+          "cpu": 1.0492857142857144,
+          "memory": 1.044875
+        },
+        "balance_score": 0.004410714285714379
+      },
+      {
+        "instance_type": "m5.4xlarge",
+        "node_count": 4,
+        "specs": {
+          "vcpu": 16,
+          "memory_gb": 64,
+          "description": "General Purpose",
+          "use_case": "Large production workloads"
+        },
+        "utilization": {
+          "cpu": 0.9181250000000001,
+          "memory": 0.8707291666666667
+        },
+        "balance_score": 0.047395833333333415
+      }
+    ],
+    "notes": [
+      "Minimum 3 nodes recommended for high availability",
+      "Node counts include redundancy factor",
+      "Consider using multiple availability zones",
+      "Actual requirements may vary based on workload patterns"
+    ]
+  },
+  "storage": {
+    "total_storage_gb": 975,
+    "recommendations": {
+      "gp3": {
+        "type": "gp3",
+        "description": "General Purpose SSD",
+        "recommended_for": "Most workloads",
+        "min_size_gb": 975
+      },
+      "io2": {
+        "type": "io2",
+        "description": "Provisioned IOPS SSD",
+        "recommended_for": "I/O-intensive workloads",
+        "min_size_gb": 975
+      }
+    }
+  }
+}

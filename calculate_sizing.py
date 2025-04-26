@@ -20,39 +20,25 @@ import argparse
 import sys
 from datetime import datetime
 
-# ROSA instance types with their specifications
-INSTANCE_TYPES = {
-    "m5.xlarge": {
-        "vcpu": 4,
-        "memory_gb": 16,
-        "description": "General Purpose",
-        "use_case": "Development/Testing environments"
-    },
-    "m5.2xlarge": {
-        "vcpu": 8,
-        "memory_gb": 32,
-        "description": "General Purpose",
-        "use_case": "Production workloads"
-    },
-    "m5.4xlarge": {
-        "vcpu": 16,
-        "memory_gb": 64,
-        "description": "General Purpose",
-        "use_case": "Large production workloads"
-    },
-    "c5.2xlarge": {
-        "vcpu": 8,
-        "memory_gb": 16,
-        "description": "Compute Optimized",
-        "use_case": "CPU-intensive workloads"
-    },
-    "r5.2xlarge": {
-        "vcpu": 8,
-        "memory_gb": 64,
-        "description": "Memory Optimized",
-        "use_case": "Memory-intensive workloads"
-    }
-}
+def load_instance_types(file_path):
+    """Load instance types from JSON file."""
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        instance_types = {}
+        for instance in data['InstanceTypes']:
+            instance_type = instance['InstanceType']
+            instance_types[instance_type] = {
+                'vcpu': instance['VCpuInfo']['DefaultVCpus'],
+                'memory_gb': instance['MemoryInfo']['SizeInMiB'] / 1024,
+                'bare_metal': instance.get('BareMetal', False)
+            }
+        return instance_types
+    except Exception as e:
+        print(f"Error loading instance types: {e}")
+        sys.exit(1)
+
+INSTANCE_TYPES = load_instance_types('instance_types.json')
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -99,57 +85,65 @@ def load_metrics(input_file):
         sys.exit(1)
 
 def calculate_worker_nodes(metrics, redundancy):
-    """Calculate recommended worker node configuration."""
+    """Calculate recommended worker node configuration with detailed analysis."""
     cpu_peak = metrics['cpu_usage']['peak'] * redundancy
     memory_peak = metrics['memory_usage']['peak'] * redundancy
-    pod_peak = metrics['pod_count']['peak'] * redundancy
     
-    # Calculate minimum nodes needed for each resource type
-    nodes_by_cpu = {}
-    nodes_by_memory = {}
-    
-    for instance_type, specs in INSTANCE_TYPES.items():
-        # Calculate nodes needed based on CPU
-        nodes_cpu = cpu_peak / specs['vcpu']
-        nodes_by_cpu[instance_type] = {
-            'count': max(3, round(nodes_cpu)),  # Minimum 3 nodes for HA
-            'utilization': (cpu_peak / max(3, round(nodes_cpu))) / specs['vcpu']
-        }
-        
-        # Calculate nodes needed based on memory
-        nodes_memory = memory_peak / specs['memory_gb']
-        nodes_by_memory[instance_type] = {
-            'count': max(3, round(nodes_memory)),
-            'utilization': (memory_peak / max(3, round(nodes_memory))) / specs['memory_gb']
-        }
-    
-    # Find optimal instance type based on balanced CPU and memory utilization
     recommendations = []
-    for instance_type in INSTANCE_TYPES:
-        cpu_nodes = nodes_by_cpu[instance_type]['count']
-        memory_nodes = nodes_by_memory[instance_type]['count']
-        recommended_nodes = max(cpu_nodes, memory_nodes)
+    for instance_type, specs in INSTANCE_TYPES.items():
+        # Calculate nodes needed based on CPU and memory
+        nodes_cpu = max(2, round(cpu_peak / specs['vcpu']))  # ROSA minimum 2 nodes
+        login_nodes = max(2, round(memory_peak / specs['memory_gb']))
+        recommended_nodes = max(nodes_cpu, login_nodes)
         
-        cpu_util = nodes_by_cpu[instance_type]['utilization']
-        memory_util = nodes_by_memory[instance_type]['utilization']
+        cpu_util = (cpu_peak / recommended_nodes) / specs['vcpu']
+        memory_util = (memory_peak / recommended_nodes) / specs['memory_gb']
         
-        # Calculate a balance score (closer to 1 is better)
-        balance_score = abs(cpu_util - memory_util)
-        
-        recommendations.append({
-            'instance_type': instance_type,
-            'node_count': recommended_nodes,
-            'specs': INSTANCE_TYPES[instance_type],
-            'utilization': {
-                'cpu': cpu_util,
-                'memory': memory_util
-            },
-            'balance_score': balance_score
-        })
+        # Check if this configuration meets ROSA requirements
+        if recommended_nodes >= 2:
+            recommendations.append({
+                'instance_type': instance_type,
+                'node_count': recommended_nodes,
+                'specs': specs,
+                'utilization': {
+                    'cpu': cpu_util,
+                    'memory': memory_util
+                },
+                'rationale': f"CPU peak: {cpu_peak:.2f} cores, Memory peak: {memory_peak:.2f} GB"
+            })
     
-    # Sort by balance score (most balanced first)
-    recommendations.sort(key=lambda x: x['balance_score'])
-    return recommendations[:3]  # Return top 3 recommendations
+    # Sort by CPU utilization efficiency
+    recommendations.sort(key=lambda x: abs(x['utilization']['cpu'] - 1))
+    return recommendations[:3]
+
+def generate_recommendations(metrics, redundancy):
+    """Generate comprehensive sizing recommendations with detailed analysis."""
+    worker_recommendations = calculate_worker_nodes(metrics, redundancy)
+    storage_recommendations = calculate_storage(metrics, redundancy)
+    
+    return {
+        'metadata': {
+            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'metrics_collection_time': metrics['metadata']['collection_time'],
+            'redundancy_factor': redundancy
+        },
+        'summary': {
+            'current_metrics': {
+                'cpu_cores_peak': metrics['cpu_usage']['peak'],
+                'memory_gb_peak': metrics['memory_usage']['peak'],
+                'pod_count_peak': metrics['pod_count']['peak'],
+                'storage_gb_peak': metrics['pvc_storage']['peak']
+            }
+        },
+        'worker_nodes': {
+            'recommendations': worker_recommendations,
+            'notes': [
+                'ROSA minimum 2 worker nodes recommended',
+                'Multiple AZs recommended for HA'
+            ]
+        },
+        'storage': storage_recommendations
+    }
 
 def calculate_storage(metrics, redundancy):
     """Calculate storage recommendations."""

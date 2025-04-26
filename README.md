@@ -20,11 +20,20 @@ A comprehensive toolset for collecting metrics and calculating sizing recommenda
 
 ## Prerequisites
 
-- Python 3.6+
-- `requests` library
-- Access to an OpenShift cluster with Prometheus
-- A service account token with cluster-monitoring-view role
-- AWS account for ROSA deployment
+### 1. Python Environment
+- Python 3.8+ recommended
+- Use a virtual environment (venv) for dependency management
+- Install dependencies using `pip install -r requirements.txt`
+
+### 2. OpenShift Cluster Access
+- Access to an OpenShift cluster with Prometheus monitoring enabled
+- A service account with `cluster-monitoring-view` role
+  - Required to access Prometheus metrics
+  - See OpenShift documentation for creating service accounts and roles
+
+### 3. AWS Account (for ROSA deployment)
+- Needed for actual ROSA cluster deployment
+- Not required for running the sizing tool itself
 
 ## Usage
 
@@ -33,92 +42,72 @@ A comprehensive toolset for collecting metrics and calculating sizing recommenda
 First, collect metrics from your OpenShift cluster:
 
 ```bash
-./collect_metrics.py --prometheus-url <URL> --token <TOKEN> [options]
+python collect_metrics.py --prometheus-url <URL> --token <TOKEN> [options]
 ```
 
 #### Metric Collection Options
 
 - `--output FILENAME` - Output file path (default: cluster_metrics.json)
-- `--days DAYS` - Number of days of historical data to analyze (default: 7)
-- `--step INTERVAL` - Query step interval (e.g., 1h, 30m, 5m) (default: 1h)
-- `--verify-ssl` - Verify SSL certificates (default: False for self-signed certs)
+- `--days DAYS` - Number of days of historical data (default: 7)
+- `--step INTERVAL` - Query interval (e.g., 1h, 30m) (default: 1h)
+- `--verify-ssl` - Verify SSL certificates (default: False)
 
 #### Cleanup Options
 
-- `--cleanup` - Clean up temporary files and reset environment
-- `--remove-backups` - Remove backup files during cleanup
-- `--remove-outputs` - Remove output files during cleanup
-- `--logout` - Logout from OpenShift during cleanup
-- `--archive` - Create a timestamped archive of output files
+- `--cleanup` - Basic cleanup
+- `--remove-backups` - Remove backup files
+- `--remove-outputs` - Remove output files
+- `--logout` - Logout from OpenShift
+- `--archive` - Create output archive
 
 ### 2. Calculate Sizing
 
-Then, analyze the collected metrics to get sizing recommendations:
+Then, analyze collected metrics:
 
 ```bash
-./calculate_sizing.py --input metrics.json [options]
+python calculate_sizing.py --input metrics.json [options]
 ```
 
 #### Sizing Calculator Options
 
-- `--input FILENAME` - Input metrics file (from collect_metrics.py)
-- `--output FILENAME` - Output file for recommendations (default: rosa_sizing.json)
-- `--format FORMAT` - Output format: json or text (default: json)
-- `--redundancy FACTOR` - Redundancy factor (e.g., 1.3 = 30% extra capacity)
-
-## Examples
-
-### 1. Collecting Metrics
-
-```bash
-./collect_metrics.py \
-  --prometheus-url https://prometheus-k8s-openshift-monitoring.apps.cluster.example.com \
-  --token eyJhbGciOiJSUzI1NiIs... \
-  --days 30 \
-  --step 1h \
-  --output my_cluster_metrics.json
-```
-
-### 2. Generating Sizing Recommendations
-
-```bash
-./calculate_sizing.py \
-  --input my_cluster_metrics.json \
-  --format text \
-  --redundancy 1.3 \
-  --output my_cluster_sizing.txt
-```
+- `--input FILENAME` - Input metrics file
+- `--output FILENAME` - Output file (default: rosa_sizing.json)
+- `--format FORMAT` - Output format: json/text (default: json)
+- `--redundancy FACTOR` - Redundancy factor (default: 1.3)
 
 ## Output Files
 
-### Metrics Collection Output (collect_metrics.py)
-- JSON file containing:
-  - CPU usage metrics (average, peak, minimum)
-  - Memory usage metrics
-  - Pod count statistics
-  - Storage usage data
-  - Node count information
-  - Resource request metrics
-  - Namespace statistics
+### Metrics Collection Output
+- JSON file with:
+  - CPU, memory, pod count, storage metrics
   - Collection metadata
 
-### Sizing Recommendations Output (calculate_sizing.py)
-- JSON format:
-  - Detailed sizing recommendations
+### Sizing Recommendations
+- JSON/Text output with:
   - Instance type suggestions
-  - Node count calculations
+  - Node count recommendations
   - Storage requirements
   - Utilization projections
-- Text format:
-  - Human-readable summary
-  - Configuration details
-  - Sizing rationale
-  - Implementation notes
+  - Rationale for recommendations
+
+## ROSA Specific Considerations
+
+### Cluster Components
+- ROSA includes managed control plane and infra nodes
+- Sizing recommendations focus on worker nodes
+
+### Minimum Requirements
+- Minimum 2-3 worker nodes recommended
+- Multiple availability zones recommended for HA
+
+### Instance Types
+- Recommendations based on ROSA-supported AWS instance types
+- Common families: m (general), c (compute), r (memory)
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Submit Pull Requests.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see LICENSE file.

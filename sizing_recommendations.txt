@@ -1,0 +1,60 @@
+================================================================================
+ROSA Cluster Sizing Recommendations
+================================================================================
+
+Generated at: 2025-04-26 14:30:45
+Based on metrics from: 2025-04-26 14:30:00
+Redundancy factor: 1.3
+
+Current Usage Peaks:
+- CPU Cores: 45.20
+- Memory (GB): 128.60
+- Pod Count: 180
+- Storage (GB): 750.20
+
+Worker Node Recommendations:
+
+1. m5.2xlarge Configuration:
+   - Number of nodes: 7
+   - vCPUs per node: 8
+   - Memory per node: 32 GB
+   - Use case: Production workloads
+   - CPU utilization: 104.9%
+   - Memory utilization: 104.5%
+
+2. c5.2xlarge Configuration:
+   - Number of nodes: 10
+   - vCPUs per node: 8
+   - Memory per node: 16 GB
+   - Use case: CPU-intensive workloads
+   - CPU utilization: 104.9%
+   - Memory utilization: 104.5%
+
+3. m5.4xlarge Configuration:
+   - Number of nodes: 4
+   - vCPUs per node: 16
+   - Memory per node: 64 GB
+   - Use case: Large production workloads
+   - CPU utilization: 91.8%
+   - Memory utilization: 87.1%
+
+Storage Recommendations:
+Total storage required: 975 GB
+
+GP3:
+- Type: gp3
+- Description: General Purpose SSD
+- Recommended for: Most workloads
+- Minimum size: 975 GB
+
+IO2:
+- Type: io2
+- Description: Provisioned IOPS SSD
+- Recommended for: I/O-intensive workloads
+- Minimum size: 975 GB
+
+Notes:
+- Minimum 3 nodes recommended for high availability
+- Node counts include redundancy factor
+- Consider using multiple availability zones
+- Actual requirements may vary based on workload patterns
