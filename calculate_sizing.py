@@ -88,42 +88,49 @@ def load_metrics(input_file):
         print(f"Error loading metrics file: {e}")
         sys.exit(1)
 
-def bin_packing_simulation(metrics, instance_type, redundancy):
-    """Simulate bin packing to estimate required nodes using both requests and usage peaks."""
+import math
+
+def bin_packing_simulation(metrics, instance_type, redundancy, max_pods_per_node=250):
+    """Simulate bin packing to estimate required nodes using requests, usage peaks, and pod density."""
     vcpu_per_node = INSTANCE_TYPES[instance_type]['vcpu']
     memory_per_node = INSTANCE_TYPES[instance_type]['memory_gb']
 
     # Baseline: average resource requests (guaranteed schedulable)
     cpu_req = metrics['cpu_requests']['average']
     mem_req = metrics['memory_requests']['average']
-    nodes_cpu_req = max(2, int(-(-cpu_req // vcpu_per_node)))  # ceil division
-    nodes_mem_req = max(2, int(-(-mem_req // memory_per_node)))
+    nodes_cpu_req = max(2, math.ceil(cpu_req / vcpu_per_node))
+    nodes_mem_req = max(2, math.ceil(mem_req / memory_per_node))
     nodes_for_requests = max(nodes_cpu_req, nodes_mem_req)
 
     # Buffer: peak usage with redundancy
     cpu_peak = metrics['cpu_usage']['peak'] * redundancy
     mem_peak = metrics['memory_usage']['peak'] * redundancy
-    nodes_cpu_peak = max(2, int(-(-cpu_peak // vcpu_per_node)))
-    nodes_mem_peak = max(2, int(-(-mem_peak // memory_per_node)))
+    nodes_cpu_peak = max(2, math.ceil(cpu_peak / vcpu_per_node))
+    nodes_mem_peak = max(2, math.ceil(mem_peak / memory_per_node))
     nodes_for_peak = max(nodes_cpu_peak, nodes_mem_peak)
 
-    # Final node count: must satisfy both
-    recommended_nodes = max(nodes_for_requests, nodes_for_peak)
+    # Pod density constraint
+    required_pods = metrics['pod_count']['peak'] * redundancy
+    nodes_for_pods = max(2, math.ceil(required_pods / max_pods_per_node))
 
-    return recommended_nodes, nodes_for_requests, nodes_for_peak
+    # Final node count: must satisfy all three constraints
+    recommended_nodes = max(nodes_for_requests, nodes_for_peak, nodes_for_pods)
+
+    return recommended_nodes, nodes_for_requests, nodes_for_peak, nodes_for_pods, max_pods_per_node
 
 def calculate_worker_nodes(metrics, redundancy):
-    """Calculate recommended worker node configuration using requests for baseline and peaks for buffer."""
+    """Calculate recommended worker node configuration using requests for baseline, peaks for buffer, and pod density."""
     recommendations = []
     for instance_type, specs in INSTANCE_TYPES.items():
-        recommended_nodes, nodes_for_requests, nodes_for_peak = bin_packing_simulation(metrics, instance_type, redundancy)
+        recommended_nodes, nodes_for_requests, nodes_for_peak, nodes_for_pods, max_pods_per_node = bin_packing_simulation(metrics, instance_type, redundancy)
         # Utilization relative to total node capacity
         cpu_util = (metrics['cpu_requests']['average']) / (recommended_nodes * specs['vcpu'])
         memory_util = (metrics['memory_requests']['average']) / (recommended_nodes * specs['memory_gb'])
         rationale = (
             f"Node count is the maximum of:\n"
             f"- Requests baseline: {nodes_for_requests} nodes (CPU req avg: {metrics['cpu_requests']['average']:.2f}, Mem req avg: {metrics['memory_requests']['average']:.2f} GB)\n"
-            f"- Peak usage w/ redundancy: {nodes_for_peak} nodes (CPU peak: {metrics['cpu_usage']['peak']:.2f} cores, Mem peak: {metrics['memory_usage']['peak']:.2f} GB, redundancy: {redundancy})"
+            f"- Peak usage w/ redundancy: {nodes_for_peak} nodes (CPU peak: {metrics['cpu_usage']['peak']:.2f} cores, Mem peak: {metrics['memory_usage']['peak']:.2f} GB, redundancy: {redundancy})\n"
+            f"- Pod density: {nodes_for_pods} nodes (Pod peak: {metrics['pod_count']['peak']:.0f}, max pods per node: {max_pods_per_node})"
         )
         recommendations.append({
             'instance_type': instance_type,
