@@ -89,27 +89,42 @@ def load_metrics(input_file):
         sys.exit(1)
 
 def bin_packing_simulation(metrics, instance_type, redundancy):
-    """Simulate bin packing to estimate required nodes."""
-    cpu_peak = metrics['cpu_usage']['peak'] * redundancy
-    memory_peak = metrics['memory_usage']['peak'] * redundancy
-    
+    """Simulate bin packing to estimate required nodes using both requests and usage peaks."""
     vcpu_per_node = INSTANCE_TYPES[instance_type]['vcpu']
     memory_per_node = INSTANCE_TYPES[instance_type]['memory_gb']
-    
-    nodes_cpu = max(2, round(cpu_peak / vcpu_per_node))  # Minimum 2 nodes for ROSA
-    nodes_memory = max(2, round(memory_peak / memory_per_node))
-    recommended_nodes = max(nodes_cpu, nodes_memory)
-    
-    return recommended_nodes
+
+    # Baseline: average resource requests (guaranteed schedulable)
+    cpu_req = metrics['cpu_requests']['average']
+    mem_req = metrics['memory_requests']['average']
+    nodes_cpu_req = max(2, int(-(-cpu_req // vcpu_per_node)))  # ceil division
+    nodes_mem_req = max(2, int(-(-mem_req // memory_per_node)))
+    nodes_for_requests = max(nodes_cpu_req, nodes_mem_req)
+
+    # Buffer: peak usage with redundancy
+    cpu_peak = metrics['cpu_usage']['peak'] * redundancy
+    mem_peak = metrics['memory_usage']['peak'] * redundancy
+    nodes_cpu_peak = max(2, int(-(-cpu_peak // vcpu_per_node)))
+    nodes_mem_peak = max(2, int(-(-mem_peak // memory_per_node)))
+    nodes_for_peak = max(nodes_cpu_peak, nodes_mem_peak)
+
+    # Final node count: must satisfy both
+    recommended_nodes = max(nodes_for_requests, nodes_for_peak)
+
+    return recommended_nodes, nodes_for_requests, nodes_for_peak
 
 def calculate_worker_nodes(metrics, redundancy):
-    """Calculate recommended worker node configuration using bin packing simulation."""
+    """Calculate recommended worker node configuration using requests for baseline and peaks for buffer."""
     recommendations = []
     for instance_type, specs in INSTANCE_TYPES.items():
-        recommended_nodes = bin_packing_simulation(metrics, instance_type, redundancy)
-        cpu_util = (metrics['cpu_usage']['peak'] * redundancy) / (recommended_nodes * specs['vcpu'])
-        memory_util = (metrics['memory_usage']['peak'] * redundancy) / (recommended_nodes * specs['memory_gb'])
-        
+        recommended_nodes, nodes_for_requests, nodes_for_peak = bin_packing_simulation(metrics, instance_type, redundancy)
+        # Utilization relative to total node capacity
+        cpu_util = (metrics['cpu_requests']['average']) / (recommended_nodes * specs['vcpu'])
+        memory_util = (metrics['memory_requests']['average']) / (recommended_nodes * specs['memory_gb'])
+        rationale = (
+            f"Node count is the maximum of:\n"
+            f"- Requests baseline: {nodes_for_requests} nodes (CPU req avg: {metrics['cpu_requests']['average']:.2f}, Mem req avg: {metrics['memory_requests']['average']:.2f} GB)\n"
+            f"- Peak usage w/ redundancy: {nodes_for_peak} nodes (CPU peak: {metrics['cpu_usage']['peak']:.2f} cores, Mem peak: {metrics['memory_usage']['peak']:.2f} GB, redundancy: {redundancy})"
+        )
         recommendations.append({
             'instance_type': instance_type,
             'node_count': recommended_nodes,
@@ -118,15 +133,14 @@ def calculate_worker_nodes(metrics, redundancy):
                 'cpu': cpu_util,
                 'memory': memory_util
             },
-            'rationale': f"Bin packing simulation: CPU peak = {metrics['cpu_usage']['peak']:.2f} cores, Memory peak = {metrics['memory_usage']['peak']:.2f} GB",
+            'rationale': rationale,
             'estimated_cost': {
                 'hourly': specs['hourly_cost'] * recommended_nodes,
                 'monthly': specs['hourly_cost'] * recommended_nodes * 730,
                 'instance_family': specs['family']
             }
         })
-    
-    # Sort recommendations by CPU utilization efficiency
+    # Sort recommendations by CPU utilization efficiency (requests-based)
     recommendations.sort(key=lambda x: abs(x['utilization']['cpu'] - 1))
     return recommendations[:3]
 

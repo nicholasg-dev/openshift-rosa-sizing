@@ -92,73 +92,17 @@ def check_openshift_login():
         print("You can still proceed with the Prometheus URL and token.")
         return False
 
-def validate_positive_integer(value, field_name):
+def validate_positive_integer(value):
     """Validate that a value is a positive integer."""
     try:
         val = int(value)
         if val <= 0:
-            raise ValueError(f"{field_name} must be a positive integer.")
+            raise ValueError("Value must be a positive integer.")
         return val
     except ValueError:
-        raise argparse.ArgumentTypeError(f"Invalid {field_name}. Please enter a positive integer.")
-
-    # Parse command line arguments
-    args = parse_arguments()
-
-    # Collect metrics from Prometheus
-    metrics = collect_metrics(args)
-
-    # Print a summary of the collected metrics
-    print("\nMetrics Summary:")
-    for metric, values in metrics.items():
-        if metric != "metadata":
-            print(f"{metric}:")
-            print(f"  Average: {values['average']:.2f}")
-            print(f"  Peak: {values['peak']:.2f}")
-            print(f"  Min: {values['min']:.2f}")
-            print(f"  Samples: {values['samples']}")
-
-    print("\nThese metrics will be used for ROSA cluster sizing calculations.")
-    print("Run the calculate_sizing.py script next to generate sizing recommendations.")
-    
-    # Perform cleanup if requested
-    if args.cleanup or args.remove_backups or args.remove_outputs or args.logout or args.archive:
-        # If any cleanup option is specified but --cleanup is not, enable it
-        if not args.cleanup:
-            args.cleanup = True
-        cleanup_environment(args)
-
-if __name__ == "__main__":
-    main()
-
-</final_file_content>
-
-IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+        raise argparse.ArgumentTypeError(f"Invalid value '{value}'. Please enter a positive integer.")
 
 
-<environment_details>
-# VSCode Visible Files
-openshift-rosa-sizing/collect_metrics.py
-
-# VSCode Open Tabs
-openshift-rosa-sizing/requirements.txt
-openshift-rosa-sizing/README.md
-openshift-rosa-sizing/collect_metrics.py
-
-# Current Time
-4/26/2025, 3:15:05 PM (America/Los_Angeles, UTC-7:00)
-
-# Context Window Usage
-127,895 / 256K tokens used (50%)
-
-# Current Mode
-ACT MODE
-#!/usr/bin/env python3
-# ============================================================================
-# OpenShift Sizing - Metric Collection Script
-# ============================================================================
-#
-# This script collects key metrics from an OpenShift cluster's Prometheus instance
 # to help with sizing calculations for ROSA (Red Hat OpenShift Service on AWS).
 #
 # The script queries Prometheus for metrics such as CPU usage, memory usage,
