@@ -27,9 +27,9 @@ DEFAULT_OUTPUT: str = "rosa_sizing.json"
 DEFAULT_FORMAT: str = "json"
 DEFAULT_REDUNDANCY: float = 1.3
 MIN_HA_WORKER_NODES: int = 3 # Minimum nodes for High Availability
-DEFAULT_MAX_PODS_PER_NODE: int = 110 # Default Kubernetes/OpenShift limit per node
+DEFAULT_MAX_PODS_PER_NODE: int = 150 # Default Kubernetes/OpenShift limit per node
 MIN_STORAGE_GB: int = 100 # Minimum recommended storage capacity for PVs
-TARGET_UTILIZATION_PERCENT: int = 65 # Target utilization for scoring
+TARGET_UTILIZATION_PERCENT: int = 75 # Target utilization for scoring
 
 # Weights for efficiency scoring (total should sum to 1.0)
 SCORE_WEIGHTS: Dict[str, float] = {
