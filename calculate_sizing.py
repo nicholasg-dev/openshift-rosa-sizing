@@ -111,7 +111,23 @@ def load_metrics(input_file: str) -> Dict[str, Any]:
         # Basic validation for required metric types and peak/average values
         required_metric_types = ["cpu", "memory", "pods", "storage"]
         if "metrics" in metrics_data:
+             # Check for both original and new key names (for backward compatibility)
              for metric_type in required_metric_types:
+                  # Check for both original and new key names
+                  if metric_type == "cpu" and "cpu_usage" in metrics_data["metrics"]:
+                      # Use cpu_usage if available
+                      metrics_data["metrics"]["cpu"] = metrics_data["metrics"]["cpu_usage"]
+                  elif metric_type == "memory" and "memory_usage" in metrics_data["metrics"]:
+                      # Use memory_usage if available
+                      metrics_data["metrics"]["memory"] = metrics_data["metrics"]["memory_usage"]
+                  elif metric_type == "pods" and "pod_count" in metrics_data["metrics"]:
+                      # Use pod_count if available
+                      metrics_data["metrics"]["pods"] = metrics_data["metrics"]["pod_count"]
+                  elif metric_type == "storage" and "storage_usage_pvc" in metrics_data["metrics"]:
+                      # Use storage_usage_pvc if available
+                      metrics_data["metrics"]["storage"] = metrics_data["metrics"]["storage_usage_pvc"]
+
+                  # Now check if the metric type exists
                   if metric_type not in metrics_data["metrics"]:
                        print(f"Warning: Missing metrics for '{metric_type}'. Calculations may be affected.", file=sys.stderr)
                        # Add dummy data to prevent errors later, but warn
