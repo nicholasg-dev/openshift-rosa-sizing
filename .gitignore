@@ -6,3 +6,10 @@ venv/
 
 # Historical sizing archives
 sizing_archives/
+
+# Metrics and sizing data files
+*.json
+*.json.bak
+
+# Output files
+*_sizing.txt
