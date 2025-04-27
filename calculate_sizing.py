@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 OpenShift ROSA Sizing Tool - Sizing Calculator Script
-Version: 2.3
+Version: 2.4  # Increment version
 
 This script analyzes collected metrics from an existing OpenShift cluster
 to provide ROSA sizing recommendations including optimal AWS instance types,
@@ -25,7 +25,7 @@ from typing import Dict, Any, List # Added type hints
 DEFAULT_INPUT: str = "cluster_metrics.json"
 DEFAULT_OUTPUT: str = "rosa_sizing.json"
 DEFAULT_FORMAT: str = "json"
-DEFAULT_REDUNDANCY: float = 1.3
+DEFAULT_REDUNDANCY: float = 1.2 # Increased redundancy for small workloads
 MIN_HA_WORKER_NODES: int = 3 # Minimum nodes for High Availability
 DEFAULT_MAX_PODS_PER_NODE: int = 150 # Default Kubernetes/OpenShift limit per node
 MIN_STORAGE_GB: int = 100 # Minimum recommended storage capacity for PVs
@@ -291,7 +291,7 @@ def calculate_sizing_requirements(metrics: Dict[str, Any], redundancy_factor: fl
          }
 
 
-def calculate_instance_score(instance_specs: Dict[str, Any], requirements: Dict[str, Any], nodes_needed: int) -> float:
+def calculate_instance_score(instance_specs: Dict[str, Any], requirements: Dict[str, Any], nodes_needed: int, max_basis_nodes: int) -> float:
     """
     Calculates an efficiency score for a given instance type and node count
     based on how well it meets the requirements.
@@ -299,7 +299,8 @@ def calculate_instance_score(instance_specs: Dict[str, Any], requirements: Dict[
     Args:
         instance_specs (dict): Specifications of the instance type.
         requirements (dict): Calculated requirements (CPU, Memory, Pods) including redundancy.
-        nodes_needed (int): The calculated number of nodes for this instance type.
+        nodes_needed (int): The final calculated number of nodes (includes HA minimum).
+        max_basis_nodes (int): The theoretical nodes needed based purely on resource/pod requirements (before HA minimum).
 
     Returns:
         float: The calculated efficiency score.
@@ -333,10 +334,21 @@ def calculate_instance_score(instance_specs: Dict[str, Any], requirements: Dict[
 
     # 2. Utilization scores: Closer to target utilization scores higher
     # Penalizes deviation from TARGET_UTILIZATION_PERCENT.
-    # Penalty capped to avoid extreme scores for very low utilization in small clusters
-    max_penalty = 50 # Cap deviation penalty at 50 points
-    cpu_util_score = 100 - min(abs(TARGET_UTILIZATION_PERCENT - cpu_utilization), max_penalty)
-    memory_util_score = 100 - min(abs(TARGET_UTILIZATION_PERCENT - memory_utilization), max_penalty)
+
+    # Determine max penalty based on whether minimum nodes were enforced
+    # If nodes_needed == MIN_HA_WORKER_NODES AND max_basis_nodes < MIN_HA_WORKER_NODES,
+    # it means the workload is small and the node count is driven by the HA minimum.
+    # In this scenario, low utilization is expected and should be penalized less severely.
+    is_min_nodes_enforced = (nodes_needed == MIN_HA_WORKER_NODES and max_basis_nodes < MIN_HA_WORKER_NODES)
+
+    # Cap deviation penalty: higher for normal scaling, lower when min nodes enforced
+    max_util_penalty = 50 # Max penalty points for large deviations (normal case)
+    min_node_max_util_penalty = 20 # Reduced max penalty when min nodes enforced
+
+    penalty_cap = min_node_max_util_penalty if is_min_nodes_enforced else max_util_penalty
+
+    cpu_util_score = 100 - min(abs(TARGET_UTILIZATION_PERCENT - cpu_utilization), penalty_cap)
+    memory_util_score = 100 - min(abs(TARGET_UTILIZATION_PERCENT - memory_utilization), penalty_cap)
 
     # 3. Node count score: Fewer nodes (closer to min_ha) score higher
     # Penalize extra nodes beyond the HA minimum
@@ -459,7 +471,7 @@ def recommend_worker_node_options(requirements: Dict[str, Any]) -> List[Dict[str
 
 
         # Calculate efficiency score for this instance type and node count
-        efficiency_score = calculate_instance_score(specs, requirements, nodes_needed)
+        efficiency_score = calculate_instance_score(specs, requirements, nodes_needed, max_basis_nodes) # Pass max_basis_nodes
 
         # Add this potential recommendation
         all_potential_recommendations.append({
@@ -543,7 +555,7 @@ def generate_recommendations(metrics: Dict[str, Any], redundancy_factor: float) 
             "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "metrics_collection_date": metrics.get("metadata", {}).get("collection_date", "Unknown"),
             "metrics_period_days": metrics.get("metadata", {}).get("days", "Unknown"),
-            "tool_version": "2.3",
+            "tool_version": "2.4", # Updated version
             "tool_notes": "Sizing is based on observed workload metrics (demand) from the source cluster, not its total available capacity (supply)."
         },
         "observed_workload_metrics": { # Renamed for clarity
@@ -593,7 +605,7 @@ def generate_recommendations(metrics: Dict[str, Any], redundancy_factor: float) 
             f"The maximum number of pods scheduled per worker node is typically limited by Kubernetes/OpenShift configuration (default {DEFAULT_MAX_PODS_PER_NODE} pods) and potentially AWS networking limits (IP addresses per ENI). This tool uses {DEFAULT_MAX_PODS_PER_NODE} as a safe default baseline for pod sizing.",
             "For complex workloads or applications with significantly different resource profiles, consider using multiple worker node pools within your ROSA cluster (e.g., one pool for general purpose workloads, another for high-CPU jobs on c-series, etc.). This tool provides ranked options across instance families but the primary recommendation assumes a single worker pool configuration.",
             f"Utilization percentages shown are based on the *calculated required resources* (after applying the redundancy factor) divided by the *total available capacity* of the recommended node configuration. For very small workloads where the {MIN_HA_WORKER_NODES}-node minimum is the limiting factor, utilization may appear very low; this is expected.",
-            f"The efficiency score ranks worker node configurations based on a balance of resource utilization (aiming near {TARGET_UTILIZATION_PERCENT}%), instance generation (newer is better), network capability, and node count (fewer nodes is generally more cost-effective and simpler to manage, especially closer to the HA minimum).",
+            f"The efficiency score ranks worker node configurations based on a balance of resource utilization (aiming near {TARGET_UTILIZATION_PERCENT}%), instance generation (newer is better), network capability, and node count (fewer nodes is generally more cost-effective and simpler to manage, especially closer to the HA minimum). Note: For very small workloads where the node count is fixed at {MIN_HA_WORKER_NODES} due to the HA requirement, the penalty for low utilization is reduced in the scoring.", # Added note about scoring adjustment
             "Cost is a significant factor in cloud sizing. Use the AWS Pricing Calculator to estimate the cost of the recommended configurations based on your region and desired purchasing options (On-Demand, Savings Plans, Reserved Instances).",
             "These recommendations are estimates based on historical workload demand and a configurable redundancy factor. It is essential to monitor your ROSA cluster after migration and be prepared to adjust scaling (vertically by changing instance types, or horizontally by adding/removing nodes) based on observed performance, future growth, or changes in application workload patterns."
         ]
@@ -675,7 +687,7 @@ def format_text_report(recommendations: Dict[str, Any]) -> str:
 
     # Add the comparison section
     report.append("\nSIZING COMPARISON:")
-    report.append(f"{'Metric':<15}{'Peak Observed':>15}{'Req\'d (w/Redundancy)':>22}{'Recommended ROSA Capacity':>28}")
+    report.append(f"{'Metric':<15}{'Peak Observed':>15}{'Required w/Redundancy':>22}{'Recommended ROSA Capacity':>28}")
     report.append("-" * 80)
     report.append(f"{'CPU (cores)':<15}{observed.get('cpu_cores', {}).get('peak_usage', 0.0):>15.2f}{final_reqs.get('cpu_cores', 0.0):>22.2f}{summary_config.get('total_cpu_cores', 0.0):>28.1f}")
     report.append(f"{'Memory (GB)':<15}{observed.get('memory_gb', {}).get('peak_usage', 0.0):>15.2f}{final_reqs.get('memory_gb', 0.0):>22.2f}{summary_config.get('total_memory_gb', 0.0):>28.1f}")

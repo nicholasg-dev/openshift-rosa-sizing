@@ -1,8 +1,14 @@
-# OpenShift ROSA Sizing Tool (v2.3)
+# OpenShift ROSA Sizing Tool (v2.4)
 
 A production-ready toolset for collecting real cluster metrics and generating accurate sizing recommendations for Red Hat OpenShift Service on AWS (ROSA) clusters.
 
 **Important Note:** This tool sizes a target ROSA cluster based on the **workload demand (usage and requests)** observed in your existing OpenShift cluster metrics. It typically does **not** know or report the *total available capacity* of the original source cluster, as this information is not usually present in standard Prometheus metrics exports. The comparison provided is between the observed *workload demand* and the *recommended ROSA capacity* needed to handle that demand plus redundancy.
+
+## Key Improvements in v2.4
+
+- **Improved Small Workload Handling**: Enhanced efficiency scoring for small workloads where the 3-node minimum HA requirement is enforced.
+- **Reduced Utilization Penalty**: Adjusted the scoring algorithm to be more lenient with low utilization when it's expected and unavoidable due to HA requirements.
+- **Better Documentation**: Added more detailed explanation in the general notes about the adjusted scoring for small workloads.
 
 ## Key Improvements in v2.3
 
@@ -41,7 +47,9 @@ Enhanced docs, ROSA-specific logic, automatic detection, workload profiling, sma
 
 ## Getting Started (Real Data Workflow)
 
-1. Ensure OpenShift CLI Access:
+Follow these steps to collect metrics and generate sizing recommendations:
+
+### Step 1: Ensure OpenShift CLI Access
 
 ```bash
 # Log in to your OpenShift cluster if not already logged in
@@ -50,10 +58,10 @@ oc login --server=https://api.your-cluster.example.com:6443 --token=YOUR_TOKEN #
 
 The `collect_metrics.py` tool requires `oc` access and will verify your login status and automatically create necessary resources (A service account with `cluster-monitoring-view` role) if needed.
 
-1. Collect Metrics (7-30 days recommended for capturing peak periods):
+### Step 2: Collect Metrics (7-30 days recommended for capturing peak periods)
 
 ```bash
-python collect_metrics.py --days 14 --step 1h --output production_metrics.json
+python3 collect_metrics.py --days 14 --step 1h --output production_metrics.json
 ```
 
 The tool will automatically:
@@ -65,22 +73,22 @@ The tool will automatically:
 - Collect and process the required metrics.
 - Save the output to the specified JSON file.
 
-1. Generate Recommendations:
+### Step 3: Generate Recommendations
 
 ```bash
-python calculate_sizing.py --input production_metrics.json --output sizing_recommendations.json --redundancy 1.3 --format text
+python3 calculate_sizing.py --input production_metrics.json --output rosa_sizing.txt --redundancy 1.2 --format text
 ```
 
-Using `--format text` (as shown above) is recommended for initial review, as it includes the human-readable comparison table. You can also output to JSON.
+Using `--format text` (as shown above) is recommended for initial review, as it includes the human-readable comparison table. You can also output to JSON with `--format json` (default).
 
-1. Review Results:
+### Step 4: Review Results
 
 ```bash
-# For JSON output (if you used --format json)
-cat sizing_recommendations.json | less # Use less for large files
+# For JSON output (if you used --format json or default)
+cat rosa_sizing.json | less # Use less for large files
 
-# For text output (if you used --format text, e.g., sizing_recommendations.txt)
-cat sizing_recommendations.txt
+# For text output (if you used --format text)
+cat rosa_sizing.txt
 ```
 
 **In the text report, look for the "OBSERVED WORKLOAD METRICS" section and the "SIZING COMPARISON" table** to understand the workload demand and how it compares to the recommended ROSA cluster capacity.
@@ -117,13 +125,13 @@ The `calculate_sizing.py` script employs the following methodology:
 
 1. **Observed Workload Demand**: Reads peak usage and peak requests for CPU, Memory, Pods, and Storage from the `collect_metrics.py` output. This represents the historical high-water mark of your workload's resource needs and resource reservations in the source cluster.
 1. **Sizing Baseline**: For CPU and Memory, the larger of the peak usage and peak requests is taken as the baseline resource need. For Pods and Storage, the peak usage/count is used as the baseline.
-1. **Redundancy Factor**: The sizing baseline is multiplied by a configurable redundancy factor (default 1.3, representing 30% overhead) to account for potential future growth, transient spikes, rolling updates, and node failures. This results in the "Calculated Required Resources" for the target ROSA cluster.
+1. **Redundancy Factor**: The sizing baseline is multiplied by a configurable redundancy factor (default 1.2, representing 20% overhead) to account for potential future growth, transient spikes, rolling updates, and node failures. This results in the "Calculated Required Resources" for the target ROSA cluster.
 1. **High Availability Minimum**: ROSA requires a minimum of 3 worker nodes for a highly available production cluster. The node count calculation will always recommend at least this minimum, even if the calculated required resources suggest fewer nodes would be sufficient.
-1. **Pod Density Limit**: A default limit of 110 pods per worker node is used as a conservative baseline, based on standard Kubernetes/OpenShift configurations and typical AWS/CNI limitations. The node count needed to support the required pod count is factored into the total node calculation.
+1. **Pod Density Limit**: A default limit of 150 pods per worker node is used as a baseline, based on standard Kubernetes/OpenShift configurations and potentially AWS networking limits. The node count needed to support the required pod count is factored into the total node calculation.
 1. **Instance Evaluation**: The script evaluates a built-in list of relevant AWS instance types suitable for ROSA worker nodes. This list includes various families (General Purpose, Compute Optimized, Memory Optimized) and processor architectures (Intel, Graviton/ARM), including bare metal variants.
 1. **Node Count Calculation per Instance Type**: For each instance type, the script calculates how many nodes of that type would be needed to meet the "Calculated Required Resources" (CPU, Memory, Pods). The highest of these individual requirements, capped by the High Availability minimum, determines the total "Nodes Needed" for that specific instance type.
 1. **Efficiency Scoring**: Each potential configuration (instance type + nodes needed) is assigned an efficiency score. This score balances:
-    - **Resource Utilization**: How closely the total capacity of the recommended nodes matches the "Calculated Required Resources" (aiming near a target utilization, e.g., 65%). Deviation is penalized.
+    - **Resource Utilization**: How closely the total capacity of the recommended nodes matches the "Calculated Required Resources" (aiming near a target utilization of 75%). Deviation is penalized.
     - **Instance Generation**: Newer generations typically offer better price/performance and features.
     - **Network Capability**: Higher network bandwidth is generally preferred for cluster communication and application traffic.
     - **Node Count**: Fewer nodes (closer to the HA minimum) are generally preferred for simplicity and potentially lower management overhead (within the constraints of meeting resource needs).
@@ -182,7 +190,7 @@ The text report is designed for easy human readability and includes key sections
 - The algorithm determines the minimum node count of a given instance type needed to satisfy the calculated resource requirements (CPU, Memory, Pods, minimum HA).
 - Utilization percentages are calculated based on the *required resources* (demand with redundancy) divided by the *total capacity* of the proposed number of nodes (supply).
 - For very small workloads where the 3-node minimum is the primary driver for the node count, utilization will naturally appear low. This is expected and does not necessarily indicate an inefficient recommendation for minimal workloads requiring HA.
-- For larger deployments, the efficiency scoring penalizes configurations with utilization far above or below the target (default 65%), aiming for a balance between cost efficiency and headroom. Configurations with extremely high utilization (>95%) are filtered out as they lack sufficient buffer.
+- For larger deployments, the efficiency scoring penalizes configurations with utilization far above or below the target (75%), aiming for a balance between cost efficiency and headroom. Configurations with extremely high utilization (>95%) are filtered out as they lack sufficient buffer.
 
 ## Cost Estimation
 

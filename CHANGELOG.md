@@ -2,6 +2,15 @@
 
 All notable changes to the OpenShift ROSA Sizing Tool will be documented in this file.
 
+## [2.4.0] - 2025-04-27
+
+### Changed
+
+- Improved efficiency scoring for small workloads where the 3-node minimum HA requirement is enforced
+- Reduced the utilization deviation penalty for small workloads to better reflect expected low utilization
+- Added more detailed explanation in the general notes about the adjusted scoring for small workloads
+- Updated internal code to pass the theoretical node count (before HA minimum) to the scoring function
+
 ## [2.1.0] - 2025-04-26
 
 ### Added

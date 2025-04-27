@@ -4,8 +4,17 @@
 # Python virtual environment
 venv/
 
-# Historical sizing archives
+# Python cache files
+__pycache__
+
+# Memory logs
+*.log
+
+# Directory for ROSA sizing archives
 sizing_archives/
+
+#Directory for memlog
+memlog/
 
 # Metrics and sizing data files
 *.json
