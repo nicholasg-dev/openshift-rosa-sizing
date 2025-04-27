@@ -1,127 +1,71 @@
 {
-  "metadata": {
-    "generated_at": "2025-04-26 15:37:42",
-    "metrics_collection_window": {
-      "start": null,
-      "end": "2025-04-26 14:51:39",
-      "duration_hours": 24
-    },
-    "redundancy_factor": 1.3,
-    "rosa_context": {
-      "rosa_specifics": {
-        "control_plane": "Managed by ROSA (3 m5.xlarge nodes)",
-        "infra_nodes": "Managed by ROSA (3 m5.xlarge nodes)",
-        "minimum_workers": 2,
-        "sla_requirements": "3+ nodes across multiple AZs recommended for production"
-      }
-    },
-    "analysis_note": "Recommendations based on peak usage during collection window"
-  },
-  "summary": {
-    "current_metrics": {
-      "cpu_cores_peak": 12.258765832749905,
-      "memory_gb_peak": 91.94367218017578,
-      "pod_count_peak": 508.0,
-      "storage_gb_peak": 1.5007057189941406
-    }
-  },
-  "worker_nodes": {
-    "recommendations": [
-      {
-        "instance_type": "x1e.8xlarge",
-        "node_count": 2,
-        "specs": {
-          "vcpu": 32,
-          "memory_gb": 976.0,
-          "bare_metal": false,
-          "hourly_cost": 0,
-          "family": "x1e"
-        },
-        "utilization": {
-          "cpu": 0.24900618097773244,
-          "memory": 0.06123297839868264
-        },
-        "rationale": "Bin packing simulation: CPU peak = 12.26 cores, Memory peak = 91.94 GB",
-        "estimated_cost": {
-          "hourly": 0,
-          "monthly": 0,
-          "instance_family": "x1e"
-        }
+  "cost": [
+    {
+      "instance_type": "x1e.8xlarge",
+      "node_count": 3,
+      "specs": {
+        "vcpu": 32,
+        "memory_gb": 976.0,
+        "bare_metal": false,
+        "hourly_cost": 0,
+        "family": "x1e"
       },
-      {
-        "instance_type": "r6idn.16xlarge",
-        "node_count": 2,
-        "specs": {
-          "vcpu": 64,
-          "memory_gb": 512.0,
-          "bare_metal": false,
-          "hourly_cost": 0,
-          "family": "r6idn"
-        },
-        "utilization": {
-          "cpu": 0.12450309048886622,
-          "memory": 0.11672536507248879
-        },
-        "rationale": "Bin packing simulation: CPU peak = 12.26 cores, Memory peak = 91.94 GB",
-        "estimated_cost": {
-          "hourly": 0,
-          "monthly": 0,
-          "instance_family": "r6idn"
-        }
+      "utilization": {
+        "cpu": 0.19993321261829697,
+        "memory": 0.04086965433235377
       },
-      {
-        "instance_type": "r7iz.metal-24xl",
-        "node_count": 2,
-        "specs": {
-          "vcpu": 96,
-          "memory_gb": 384.0,
-          "bare_metal": true,
-          "hourly_cost": 0,
-          "family": "r7iz"
-        },
-        "utilization": {
-          "cpu": 0.08300206032591081,
-          "memory": 0.15563382009665172
-        },
-        "rationale": "Bin packing simulation: CPU peak = 12.26 cores, Memory peak = 91.94 GB",
-        "estimated_cost": {
-          "hourly": 0,
-          "monthly": 0,
-          "instance_family": "r7iz"
-        }
-      }
-    ],
-    "notes": [
-      "Minimum 3 nodes recommended for high availability",
-      "Node counts include redundancy factor",
-      "Consider using multiple availability zones",
-      "Actual requirements may vary based on workload patterns"
-    ]
-  },
-  "storage": {
-    "total_storage_gb": 2,
-    "performance_requirements": {
-      "iops_peak": 3900,
-      "throughput_peak_mbps": 162,
-      "storage_profile": "balanced"
-    },
-    "recommendations": {
-      "gp3": {
-        "type": "gp3",
-        "description": "General Purpose SSD",
-        "recommended_for": "Most workloads",
-        "min_size_gb": 2,
-        "min_iops": 3120,
-        "min_throughput": 130
-      },
-      "io2": {
-        "type": "io2",
-        "description": "Provisioned IOPS SSD",
-        "recommended_for": "I/O-intensive workloads",
-        "min_size_gb": 2,
-        "min_iops": 3120,
-        "min_throughput": 130
+      "rationale": "Node count is the maximum of (using 95th percentile):\n- CPU: 2 nodes (CPU 95p: 19.19)\n- Memory: 2 nodes (Mem 95p: 119.67 GB)\n- Pod density: 3 nodes (Pod 95p: 655, max pods per node: 250)",
+      "estimated_cost": {
+        "hourly": 0,
+        "monthly": 0,
+        "instance_family": "x1e"
       }
     }
-  }
+  ],
+  "balanced": [
+    {
+      "instance_type": "x1e.8xlarge",
+      "node_count": 3,
+      "specs": {
+        "vcpu": 32,
+        "memory_gb": 976.0,
+        "bare_metal": false,
+        "hourly_cost": 0,
+        "family": "x1e"
+      },
+      "utilization": {
+        "cpu": 0.19993321261829697,
+        "memory": 0.04086965433235377
+      },
+      "rationale": "Node count is the maximum of (using 95th percentile):\n- CPU: 2 nodes (CPU 95p: 19.19)\n- Memory: 2 nodes (Mem 95p: 119.67 GB)\n- Pod density: 3 nodes (Pod 95p: 655, max pods per node: 250)",
+      "estimated_cost": {
+        "hourly": 0,
+        "monthly": 0,
+        "instance_family": "x1e"
+      }
+    }
+  ],
+  "performance": [
+    {
+      "instance_type": "x1e.8xlarge",
+      "node_count": 3,
+      "specs": {
+        "vcpu": 32,
+        "memory_gb": 976.0,
+        "bare_metal": false,
+        "hourly_cost": 0,
+        "family": "x1e"
+      },
+      "utilization": {
+        "cpu": 0.19993321261829697,
+        "memory": 0.04086965433235377
+      },
+      "rationale": "Node count is the maximum of (using 95th percentile):\n- CPU: 2 nodes (CPU 95p: 19.19)\n- Memory: 2 nodes (Mem 95p: 119.67 GB)\n- Pod density: 3 nodes (Pod 95p: 655, max pods per node: 250)",
+      "estimated_cost": {
+        "hourly": 0,
+        "monthly": 0,
+        "instance_family": "x1e"
+      }
+    }
+  ]
 }
