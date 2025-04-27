@@ -115,19 +115,19 @@ pip install -r requirements.txt
 
 The `calculate_sizing.py` script employs the following methodology:
 
-1.  **Observed Workload Demand**: Reads peak usage and peak requests for CPU, Memory, Pods, and Storage from the `collect_metrics.py` output. This represents the historical high-water mark of your workload's resource needs and resource reservations in the source cluster.
-1.  **Sizing Baseline**: For CPU and Memory, the larger of the peak usage and peak requests is taken as the baseline resource need. For Pods and Storage, the peak usage/count is used as the baseline.
-1.  **Redundancy Factor**: The sizing baseline is multiplied by a configurable redundancy factor (default 1.3, representing 30% overhead) to account for potential future growth, transient spikes, rolling updates, and node failures. This results in the "Calculated Required Resources" for the target ROSA cluster.
-1.  **High Availability Minimum**: ROSA requires a minimum of 3 worker nodes for a highly available production cluster. The node count calculation will always recommend at least this minimum, even if the calculated required resources suggest fewer nodes would be sufficient.
-1.  **Pod Density Limit**: A default limit of 110 pods per worker node is used as a conservative baseline, based on standard Kubernetes/OpenShift configurations and typical AWS/CNI limitations. The node count needed to support the required pod count is factored into the total node calculation.
-1.  **Instance Evaluation**: The script evaluates a built-in list of relevant AWS instance types suitable for ROSA worker nodes. This list includes various families (General Purpose, Compute Optimized, Memory Optimized) and processor architectures (Intel, Graviton/ARM), including bare metal variants.
-1.  **Node Count Calculation per Instance Type**: For each instance type, the script calculates how many nodes of that type would be needed to meet the "Calculated Required Resources" (CPU, Memory, Pods). The highest of these individual requirements, capped by the High Availability minimum, determines the total "Nodes Needed" for that specific instance type.
-1.  **Efficiency Scoring**: Each potential configuration (instance type + nodes needed) is assigned an efficiency score. This score balances:
+1. **Observed Workload Demand**: Reads peak usage and peak requests for CPU, Memory, Pods, and Storage from the `collect_metrics.py` output. This represents the historical high-water mark of your workload's resource needs and resource reservations in the source cluster.
+1. **Sizing Baseline**: For CPU and Memory, the larger of the peak usage and peak requests is taken as the baseline resource need. For Pods and Storage, the peak usage/count is used as the baseline.
+1. **Redundancy Factor**: The sizing baseline is multiplied by a configurable redundancy factor (default 1.3, representing 30% overhead) to account for potential future growth, transient spikes, rolling updates, and node failures. This results in the "Calculated Required Resources" for the target ROSA cluster.
+1. **High Availability Minimum**: ROSA requires a minimum of 3 worker nodes for a highly available production cluster. The node count calculation will always recommend at least this minimum, even if the calculated required resources suggest fewer nodes would be sufficient.
+1. **Pod Density Limit**: A default limit of 110 pods per worker node is used as a conservative baseline, based on standard Kubernetes/OpenShift configurations and typical AWS/CNI limitations. The node count needed to support the required pod count is factored into the total node calculation.
+1. **Instance Evaluation**: The script evaluates a built-in list of relevant AWS instance types suitable for ROSA worker nodes. This list includes various families (General Purpose, Compute Optimized, Memory Optimized) and processor architectures (Intel, Graviton/ARM), including bare metal variants.
+1. **Node Count Calculation per Instance Type**: For each instance type, the script calculates how many nodes of that type would be needed to meet the "Calculated Required Resources" (CPU, Memory, Pods). The highest of these individual requirements, capped by the High Availability minimum, determines the total "Nodes Needed" for that specific instance type.
+1. **Efficiency Scoring**: Each potential configuration (instance type + nodes needed) is assigned an efficiency score. This score balances:
     - **Resource Utilization**: How closely the total capacity of the recommended nodes matches the "Calculated Required Resources" (aiming near a target utilization, e.g., 65%). Deviation is penalized.
     - **Instance Generation**: Newer generations typically offer better price/performance and features.
     - **Network Capability**: Higher network bandwidth is generally preferred for cluster communication and application traffic.
     - **Node Count**: Fewer nodes (closer to the HA minimum) are generally preferred for simplicity and potentially lower management overhead (within the constraints of meeting resource needs).
-1.  **Ranking and Recommendation**: Configurations are sorted by their efficiency score (highest first) and the top options are presented. The absolute top option is highlighted as the "Recommended ROSA Configuration Summary".
+1. **Ranking and Recommendation**: Configurations are sorted by their efficiency score (highest first) and the top options are presented. The absolute top option is highlighted as the "Recommended ROSA Configuration Summary".
 
 ## Interpreting the Output
 
@@ -172,10 +172,10 @@ The text report is designed for easy human readability and includes key sections
 
 - Recommendations are generated by evaluating a built-in list of current and recent generation x86_64 AWS instance types supported by ROSA.
 - The list includes:
-    - **General Purpose (m-series, m7i, m6i, m7g):** Provide a balance of compute, memory, and networking resources. Good for a wide range of applications. Includes Intel and Graviton (ARM) variants. Bare metal options (.metal) are included.
-    - **Compute Optimized (c-series, c7i, c7g):** Offer a higher ratio of vCPUs to memory, suitable for compute-intensive applications like batch processing, video encoding, or high-performance web servers. Includes Intel and Graviton (ARM) variants. Bare metal options (.metal) are included.
-    - **Memory Optimized (r-series, r7i, r7g):** Offer a higher ratio of memory to vCPUs, suitable for memory-intensive applications like databases, real-time analytics, or caches. Includes Intel and Graviton (ARM) variants. Bare metal options (.metal) are included.
-    - *(Note: Specialized instance types like Storage Optimized (i-series) or Accelerated Computing (p/g-series) are typically used for specific workloads and may require separate consideration or node pools not directly covered by the primary recommendation).*
+  - **General Purpose (m-series, m7i, m6i, m7g):** Provide a balance of compute, memory, and networking resources. Good for a wide range of applications. Includes Intel and Graviton (ARM) variants. Bare metal options (.metal) are included.
+  - **Compute Optimized (c-series, c7i, c7g):** Offer a higher ratio of vCPUs to memory, suitable for compute-intensive applications like batch processing, video encoding, or high-performance web servers. Includes Intel and Graviton (ARM) variants. Bare metal options (.metal) are included.
+  - **Memory Optimized (r-series, r7i, r7g):** Offer a higher ratio of memory to vCPUs, suitable for memory-intensive applications like databases, real-time analytics, or caches. Includes Intel and Graviton (ARM) variants. Bare metal options (.metal) are included.
+  - *(Note: Specialized instance types like Storage Optimized (i-series) or Accelerated Computing (p/g-series) are typically used for specific workloads and may require separate consideration or node pools not directly covered by the primary recommendation).*
 
 ### Sizing Algorithm & Utilization
 
