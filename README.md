@@ -8,6 +8,7 @@ A production-ready toolset for collecting real cluster metrics and generating ac
 - **ROSA-Specific Logic**: Added managed control plane considerations
 - **Cost Estimation**: Integrated rough cost projections
 - **Workload Profiling**: Automatic CPU/Memory-bound detection
+- **Small Workload Support**: Improved handling of small workloads with 3-node minimum HA requirement
 
 ## Features
 
@@ -149,6 +150,10 @@ python calculate_sizing.py --input metrics.json [options]
 - Simulates different instance types and counts to find optimal configuration
 - Considers both average and peak usage with redundancy factor
 - Provides rationale for recommended configurations
+- Applies utilization filtering to ensure efficient resource usage:
+  - For small workloads with 3-node minimum HA requirement, no lower utilization bound is enforced
+  - For larger deployments, utilization targets are 30-80% for both CPU and memory
+  - Clearly identifies when the 3-node minimum HA requirement is the limiting factor
 
 ## Cost Estimation
 
@@ -165,6 +170,10 @@ While the tool doesn't directly pull AWS pricing data, you can use the instance 
 - Human-readable summary
 - Configuration details
 - Sizing rationale
+- Detailed notes section including:
+  - Information about the 3-node minimum HA requirement
+  - Explanation of utilization targets for different deployment sizes
+  - Guidance on interpreting low utilization for small workloads
 
 ## Contributing
 
