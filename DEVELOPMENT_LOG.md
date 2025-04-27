@@ -25,6 +25,12 @@ This feature branch (`feature/enhanced-metrics-collection`) enhances the OpenShi
 - Maintained backward compatibility with `calculate_sizing.py`
 - Improved error handling for partial data collection
 
+### 2023-11-15: Fixed Sizing Baseline Display
+- Fixed issue with sizing baseline display in the report
+- Modified `load_metrics()` in `calculate_sizing.py` to handle both original and new key names
+- Added support for new metric key names (cpu_usage, memory_usage, pod_count, storage_usage_pvc)
+- Ensures correct display of sizing baseline values in the report
+
 ## Compatibility Notes
 - The enhanced script maintains the original output structure expected by `calculate_sizing.py`
 - New data is added under additional keys that don't interfere with existing functionality
