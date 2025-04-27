@@ -1,0 +1,67 @@
+{
+    "metadata": {
+        "collection_date": "2025-04-26T17:57:17-07:00",
+        "start_date": "2025-04-12T17:57:17-07:00",
+        "end_date": "2025-04-26T17:57:17-07:00",
+        "days": 14,
+        "step": "1h"
+    },
+    "metrics": {
+        "cpu": {
+            "average": 8.45,
+            "peak": 11.19,
+            "values": [
+                {"timestamp": 1745001720, "value": 7.2},
+                {"timestamp": 1745005320, "value": 8.1},
+                {"timestamp": 1745008920, "value": 9.5},
+                {"timestamp": 1745012520, "value": 10.2},
+                {"timestamp": 1745016120, "value": 11.19},
+                {"timestamp": 1745019720, "value": 9.8},
+                {"timestamp": 1745023320, "value": 8.7},
+                {"timestamp": 1745026920, "value": 7.9}
+            ]
+        },
+        "memory": {
+            "average": 75.62,
+            "peak": 91.94,
+            "values": [
+                {"timestamp": 1745001720, "value": 68.3},
+                {"timestamp": 1745005320, "value": 72.5},
+                {"timestamp": 1745008920, "value": 78.9},
+                {"timestamp": 1745012520, "value": 85.2},
+                {"timestamp": 1745016120, "value": 91.94},
+                {"timestamp": 1745019720, "value": 84.7},
+                {"timestamp": 1745023320, "value": 76.8},
+                {"timestamp": 1745026920, "value": 73.4}
+            ]
+        },
+        "pods": {
+            "average": 423,
+            "peak": 504,
+            "values": [
+                {"timestamp": 1745001720, "value": 385},
+                {"timestamp": 1745005320, "value": 412},
+                {"timestamp": 1745008920, "value": 456},
+                {"timestamp": 1745012520, "value": 487},
+                {"timestamp": 1745016120, "value": 504},
+                {"timestamp": 1745019720, "value": 478},
+                {"timestamp": 1745023320, "value": 432},
+                {"timestamp": 1745026920, "value": 410}
+            ]
+        },
+        "storage": {
+            "average": 1.25,
+            "peak": 1.50,
+            "values": [
+                {"timestamp": 1745001720, "value": 1.10},
+                {"timestamp": 1745005320, "value": 1.18},
+                {"timestamp": 1745008920, "value": 1.32},
+                {"timestamp": 1745012520, "value": 1.41},
+                {"timestamp": 1745016120, "value": 1.50},
+                {"timestamp": 1745019720, "value": 1.42},
+                {"timestamp": 1745023320, "value": 1.28},
+                {"timestamp": 1745026920, "value": 1.22}
+            ]
+        }
+    }
+}

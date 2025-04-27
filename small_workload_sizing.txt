@@ -1,0 +1,68 @@
+================================================================================
+ROSA SIZING RECOMMENDATIONS REPORT
+================================================================================
+
+REPORT METADATA:
+  Generation Date: 2025-04-26 19:09:22
+  Metrics Collection Date: 2025-04-26T18:47:11.932603
+  Metrics Period: 7 days
+  Redundancy Factor: 1.3
+
+CLUSTER METRICS:
+  CPU Usage: 2.00 cores peak, 1.50 cores average
+  Memory Usage: 8.00 GB peak, 6.00 GB average
+  Pod Count: 25 peak, 20 average
+  Storage Usage: 7.00 GB peak, 5.00 GB average
+
+CLUSTER REQUIREMENTS (with redundancy):
+  CPU Required: 2.60 cores
+  Memory Required: 10.40 GB
+  Pod Count Required: 32
+  Storage Required: 20 GB
+  Workload Profile: balanced
+
+RECOMMENDED INSTANCE TYPES:
+
+  OPTION 1: c7i.16xlarge (Latest gen compute optimized - Intel Sapphire Rapids)
+    vCPUs: 64 per node, Memory: 128 GB per node
+    Nodes Required: 3 (limited by HA Minimum)
+    Utilization: CPU 1.4%, Memory 2.7%
+    Total Capacity: 192 vCPUs, 384 GB Memory
+
+  OPTION 2: m7i.16xlarge (Latest gen general purpose - Intel Sapphire Rapids)
+    vCPUs: 64 per node, Memory: 256 GB per node
+    Nodes Required: 3 (limited by HA Minimum)
+    Utilization: CPU 1.4%, Memory 1.4%
+    Total Capacity: 192 vCPUs, 768 GB Memory
+
+  OPTION 3: c7i.24xlarge (Latest gen compute optimized - Intel Sapphire Rapids)
+    vCPUs: 96 per node, Memory: 192 GB per node
+    Nodes Required: 3 (limited by HA Minimum)
+    Utilization: CPU 0.9%, Memory 1.8%
+    Total Capacity: 288 vCPUs, 576 GB Memory
+
+  OPTION 4: c7i.metal-24xl (Latest gen compute optimized - Bare metal)
+    vCPUs: 96 per node, Memory: 192 GB per node
+    Nodes Required: 3 (limited by HA Minimum)
+    Utilization: CPU 0.9%, Memory 1.8%
+    Total Capacity: 288 vCPUs, 576 GB Memory
+
+  OPTION 5: r7i.16xlarge (Latest gen memory optimized - Intel Sapphire Rapids)
+    vCPUs: 64 per node, Memory: 512 GB per node
+    Nodes Required: 3 (limited by HA Minimum)
+    Utilization: CPU 1.4%, Memory 0.7%
+    Total Capacity: 192 vCPUs, 1536 GB Memory
+
+GENERAL RECOMMENDATIONS:
+  Minimum Worker Nodes: 3
+  Recommended Worker Nodes: 3 (for high availability)
+  Storage Recommendation: 20 GB minimum
+
+NOTES:
+  - ROSA includes managed control plane and infra nodes (typically on m5.xlarge instances)
+  - Recommendations focus on worker nodes which handle application workloads
+  - 3+ worker nodes recommended for high availability
+  - Multiple availability zones recommended for production environments
+  - For small workloads, utilization may be low due to the 3-node minimum requirement
+  - For larger deployments, utilization targets are 30-80% for both CPU and memory
+  - Use AWS Pricing Calculator to estimate costs based on these recommendations

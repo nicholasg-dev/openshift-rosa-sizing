@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "collection_date": "2025-04-26T18:47:11.932603",
+    "start_date": "2025-04-19T18:47:11",
+    "end_date": "2025-04-26T18:47:11",
+    "days": 7,
+    "step": "1h"
+  },
+  "metrics": {
+    "cpu": {
+      "unit": "cores",
+      "average": 1.5,
+      "peak": 2.0,
+      "values": [
+        {
+          "timestamp": 1745531231,
+          "value": 1.5
+        }
+      ]
+    },
+    "memory": {
+      "unit": "GB",
+      "average": 6.0,
+      "peak": 8.0,
+      "values": [
+        {
+          "timestamp": 1745531231,
+          "value": 6.0
+        }
+      ]
+    },
+    "pods": {
+      "unit": "pods",
+      "average": 20,
+      "peak": 25,
+      "values": [
+        {
+          "timestamp": 1745531231,
+          "value": 20
+        }
+      ]
+    },
+    "storage": {
+      "unit": "GB",
+      "average": 5.0,
+      "peak": 7.0,
+      "values": [
+        {
+          "timestamp": 1745531231,
+          "value": 5.0
+        }
+      ]
+    }
+  }
+}

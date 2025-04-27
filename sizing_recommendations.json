@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "generation_date": "2025-04-26 18:25:44",
+    "metrics_collection_date": "2025-04-26T17:57:17-07:00",
+    "metrics_period_days": 14,
+    "redundancy_factor": 1.3
+  },
+  "cluster_metrics": {
+    "cpu_peak_cores": 11.19,
+    "cpu_avg_cores": 8.45,
+    "memory_peak_gb": 91.94,
+    "memory_avg_gb": 75.62,
+    "pod_count_peak": 504,
+    "pod_count_avg": 423,
+    "storage_peak_gb": 1.5,
+    "storage_avg_gb": 1.25
+  },
+  "requirements": {
+    "cpu_required_cores": 14.547,
+    "memory_required_gb": 119.522,
+    "pod_count_required": 655.2,
+    "storage_required_gb": 10,
+    "workload_profile": "balanced",
+    "min_nodes_required": 7
+  },
+  "instance_recommendations": [
+    {
+      "instance_type": "m7i.xlarge",
+      "vcpus": 4,
+      "memory_gb": 16,
+      "description": "Latest gen general purpose - Intel Sapphire Rapids",
+      "network": "up to 12.5 Gbps",
+      "generation": 7,
+      "nodes_needed": 7,
+      "cpu_utilization": 51.95357142857143,
+      "memory_utilization": 106.71607142857142,
+      "limiting_factor": "Memory",
+      "total_vcpus": 28,
+      "total_memory_gb": 112,
+      "efficiency_score": 149.33482142857144
+    },
+    {
+      "instance_type": "m7i.8xlarge",
+      "vcpus": 32,
+      "memory_gb": 128,
+      "description": "Latest gen general purpose - Intel Sapphire Rapids",
+      "network": "25 Gbps",
+      "generation": 7,
+      "nodes_needed": 1,
+      "cpu_utilization": 45.459375,
+      "memory_utilization": 93.3765625,
+      "limiting_factor": "CPU",
+      "total_vcpus": 32,
+      "total_memory_gb": 128,
+      "efficiency_score": 144.41796875
+    },
+    {
+      "instance_type": "m7i.4xlarge",
+      "vcpus": 16,
+      "memory_gb": 64,
+      "description": "Latest gen general purpose - Intel Sapphire Rapids",
+      "network": "up to 25 Gbps",
+      "generation": 7,
+      "nodes_needed": 2,
+      "cpu_utilization": 45.459375,
+      "memory_utilization": 93.3765625,
+      "limiting_factor": "Memory",
+      "total_vcpus": 32,
+      "total_memory_gb": 128,
+      "efficiency_score": 144.41796875
+    },
+    {
+      "instance_type": "m7i.2xlarge",
+      "vcpus": 8,
+      "memory_gb": 32,
+      "description": "Latest gen general purpose - Intel Sapphire Rapids",
+      "network": "up to 15 Gbps",
+      "generation": 7,
+      "nodes_needed": 4,
+      "cpu_utilization": 45.459375,
+      "memory_utilization": 93.3765625,
+      "limiting_factor": "Memory",
+      "total_vcpus": 32,
+      "total_memory_gb": 128,
+      "efficiency_score": 139.41796875
+    },
+    {
+      "instance_type": "m6i.xlarge",
+      "vcpus": 4,
+      "memory_gb": 16,
+      "description": "General purpose - Intel Ice Lake",
+      "network": "up to 12.5 Gbps",
+      "generation": 6,
+      "nodes_needed": 7,
+      "cpu_utilization": 51.95357142857143,
+      "memory_utilization": 106.71607142857142,
+      "limiting_factor": "Memory",
+      "total_vcpus": 28,
+      "total_memory_gb": 112,
+      "efficiency_score": 139.33482142857144
+    }
+  ],
+  "general_recommendations": {
+    "minimum_worker_nodes": 3,
+    "recommended_worker_nodes": 7,
+    "storage_recommendation": "10 GB minimum"
+  }
+}
