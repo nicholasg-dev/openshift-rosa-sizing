@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 OpenShift ROSA Sizing Tool - Metric and Sizing Collection Script
-Version: 2.1
+Version: 2.5
 
 This script collects metrics from an OpenShift cluster's Prometheus instance
 and the cluster's allocated node sizing for use in sizing ROSA clusters.
@@ -44,7 +44,7 @@ def check_dependencies():
     if sys.version_info < (3, 6):
         print("Error: This script requires Python 3.6 or later.")
         missing_deps.append("Python 3.6+")
-    
+
     try:
         import urllib3
         print("urllib3 found")

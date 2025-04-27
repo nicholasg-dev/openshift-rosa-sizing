@@ -1,8 +1,17 @@
-# OpenShift ROSA Sizing Tool (v2.4)
+# OpenShift ROSA Sizing Tool (v2.5)
 
 A production-ready toolset for collecting real cluster metrics and generating accurate sizing recommendations for Red Hat OpenShift Service on AWS (ROSA) clusters.
 
 **Important Note:** This tool sizes a target ROSA cluster based on the **workload demand (usage and requests)** observed in your existing OpenShift cluster metrics. It typically does **not** know or report the *total available capacity* of the original source cluster, as this information is not usually present in standard Prometheus metrics exports. The comparison provided is between the observed *workload demand* and the *recommended ROSA capacity* needed to handle that demand plus redundancy.
+
+## Key Improvements in v2.5
+
+- **Cluster Node Sizing Collection**: Added functionality to collect and analyze actual node information from the source cluster, including CPU, memory, instance types, and roles.
+- **Enhanced Output Format**: Modified output structure to include both usage metrics and cluster sizing information in a single file.
+- **Improved Backward Compatibility**: Maintained compatibility with existing scripts while adding new data fields.
+- **Resource String Parsing**: Added helper functions to parse Kubernetes resource strings (CPU, memory) for accurate sizing.
+- **Partial Data Collection**: Script can now continue with partial data collection if Prometheus metrics collection fails.
+- **Fixed Sizing Baseline Display**: Corrected the display of sizing baseline values in the report.
 
 ## Key Improvements in v2.4
 
@@ -25,23 +34,26 @@ Enhanced docs, ROSA-specific logic, automatic detection, workload profiling, sma
 
 ## Features
 
-### Metric Collection (collect_metrics.py)
+### Metric and Sizing Collection (collect_metrics.py)
 
 - Connects to an OpenShift cluster's Prometheus instance to collect key metrics (CPU usage/requests/limits, memory usage/requests/limits, pod count, storage usage).
+- Collects actual cluster node sizing information using `oc get nodes`, including CPU, memory, instance types, and roles.
 - Analyzes historical data over a specified period (e.g., 7 or 30 days).
 - Calculates peak and average values to understand workload characteristics and high watermarks.
 - Automatically handles OpenShift authentication (service account, token).
 - Detects Prometheus URL automatically by first checking the OpenShift route and then constructing from the cluster URL if needed.
-- Saves metrics to a structured JSON file.
+- Continues with partial data collection if Prometheus metrics collection fails.
+- Saves both metrics and sizing information to a structured JSON file.
 
 ### Sizing Calculator (calculate_sizing.py)
 
-- Reads the collected workload metrics from the JSON input file.
+- Reads the collected workload metrics and cluster sizing information from the JSON input file.
 - Analyzes the workload profile (CPU-bound, Memory-bound, or Balanced).
 - Calculates the total required resources (CPU, memory, pods, storage) for the target ROSA cluster based on observed peaks/requests plus a configurable redundancy factor.
 - Evaluates a comprehensive list of relevant AWS instance types suitable for ROSA worker nodes (including General Purpose, Compute Optimized, Memory Optimized, Intel/AMD/Graviton, and bare metal).
 - Determines the minimum number of nodes of each instance type required to meet the calculated resource needs and the minimum high availability requirement (3 nodes).
 - Ranks potential worker node configurations using an efficiency score that considers factors, instance generation, resource utilization, network capability, and total node count.
+- Handles both original and new format data for backward compatibility.
 - Generates detailed recommendations in both JSON and human-readable text formats.
 - **Provides a comparison in the text output showing the observed workload demand, the calculated required resources, and the total capacity of the recommended ROSA cluster configuration.**
 
@@ -61,7 +73,7 @@ The `collect_metrics.py` tool requires `oc` access and will verify your login st
 ### Step 2: Collect Metrics (7-30 days recommended for capturing peak periods)
 
 ```bash
-python3 collect_metrics.py --days 14 --step 1h --output production_metrics.json
+python3 collect_metrics.py --days 14 --step 1h --output production_cluster_data.json
 ```
 
 The tool will automatically:
@@ -76,7 +88,7 @@ The tool will automatically:
 ### Step 3: Generate Recommendations
 
 ```bash
-python3 calculate_sizing.py --input production_metrics.json --output rosa_sizing.txt --redundancy 1.2 --format text
+python3 calculate_sizing.py --input production_cluster_data.json --output rosa_sizing.txt --redundancy 1.2 --format text
 ```
 
 Using `--format text` (as shown above) is recommended for initial review, as it includes the human-readable comparison table. You can also output to JSON with `--format json` (default).
