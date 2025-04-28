@@ -14,9 +14,9 @@ import os
 import subprocess
 import sys
 import time
-import urllib3
-import requests
 import re # Import re for parsing resource strings
+
+# urllib3 and requests will be imported after dependency check
 
 # Default configuration
 DEFAULT_OUTPUT = "cluster_data.json" # Renamed output file to be more general
@@ -36,7 +36,7 @@ QUERY_CPU_LIMITS_PEAK = "sum(kube_pod_container_resource_limits{resource='cpu'})
 QUERY_MEMORY_LIMITS_PEAK = "sum(kube_pod_container_resource_limits{resource='memory'})"
 
 
-# Check dependencies before importing them (Existing)
+# Check dependencies and import them
 def check_dependencies():
     print("Checking dependencies...")
     missing_deps = []
@@ -45,13 +45,16 @@ def check_dependencies():
         print("Error: This script requires Python 3.6 or later.")
         missing_deps.append("Python 3.6+")
 
+    # Try to import required modules
     try:
+        global urllib3
         import urllib3
         print("urllib3 found")
     except ImportError:
         missing_deps.append("urllib3")
 
     try:
+        global requests
         import requests
         print("requests found")
     except ImportError:
@@ -66,11 +69,11 @@ def check_dependencies():
              print("\n1. Using a virtual environment (recommended):")
              print("   python3 -m venv venv")
              print("   source venv/bin/activate")
-             print("   pip install -r requirements.txt") # You'd need requests and urllib3 in requirements.txt
+             print("   pip install requests urllib3")
              print("\n2. User-specific installation:")
              print("   pip install --user requests urllib3")
-             print("\n3. System-wide installation (requires sudo, not recommended):")
-             print("   sudo pip3 install requests urllib3")
+             print("\n3. Direct package installation:")
+             print(f"   pip install {' '.join(missing_deps)}")
 
         return False
     print("All dependencies found")
@@ -80,8 +83,14 @@ def check_dependencies():
 if not check_dependencies():
     sys.exit(1)
 
-# Disable SSL warnings (Existing)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# Now that we've imported urllib3, we can use it
+try:
+    # Disable SSL warnings
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except NameError:
+    # If urllib3 import failed but we got here, something is wrong
+    print("Error: urllib3 module not available despite dependency check.")
+    sys.exit(1)
 
 class PrometheusClient:
     """Client for interacting with Prometheus API in OpenShift"""
